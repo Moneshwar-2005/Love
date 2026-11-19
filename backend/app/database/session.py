@@ -5,7 +5,8 @@ Database session management, engine lifecycle, and connectivity checks for LOVE.
 import time
 from pathlib import Path
 from typing import AsyncGenerator, Dict, Tuple
-from sqlalchemy import text
+from sqlalchemy import event, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -46,6 +47,17 @@ if settings.DATABASE_URL.startswith("sqlite"):
 
 # Async SQLAlchemy engine
 engine: AsyncEngine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
+
+
+# Enable SQLite foreign key constraint enforcement
+@event.listens_for(engine.sync_engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, connection_record):
+    """Enforces SQLite foreign key constraints and ON DELETE CASCADE behavior."""
+    if settings.DATABASE_URL.startswith("sqlite"):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
 
 # Async session factory
 AsyncSessionLocal = async_sessionmaker(

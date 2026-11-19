@@ -6,7 +6,7 @@ Powered by Pydantic Settings.
 from functools import lru_cache
 from pathlib import Path
 from typing import List, Union
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -119,6 +119,25 @@ class Settings(BaseSettings):
     def effective_jwt_secret(self) -> str:
         """Returns JWT_SECRET_KEY if configured, otherwise falls back to SECRET_KEY."""
         return self.JWT_SECRET_KEY if self.JWT_SECRET_KEY else self.SECRET_KEY
+
+    @model_validator(mode="after")
+    def validate_production_security(self) -> "Settings":
+        """Enforces security rules when running in production environment."""
+        if self.APP_ENV == "production":
+            insecure_keys = {
+                "love-dev-secret-key-replace-in-production-min-32-chars",
+                "love-development-insecure-secret-key-replace-in-production-32c",
+                "change-me-in-production-love-super-secret-key-32chars",
+                "generate-a-secure-random-32-character-secret-key-for-production",
+            }
+            if self.effective_jwt_secret in insecure_keys or len(self.effective_jwt_secret) < 32:
+                raise ValueError(
+                    "CRITICAL SECURITY: Insecure or default SECRET_KEY detected in production environment. "
+                    "You must provide a secure, unique SECRET_KEY or JWT_SECRET_KEY of at least 32 characters."
+                )
+            if self.DEBUG:
+                raise ValueError("CRITICAL SECURITY: DEBUG mode must be disabled in production.")
+        return self
 
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE) if ENV_FILE.exists() else None,

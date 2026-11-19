@@ -8,6 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.database.models.device import Device
 from backend.app.database.models.user import User
 from backend.app.database.session import get_db
 from backend.app.security.tokens import TokenError, decode_token
@@ -25,7 +26,8 @@ async def get_current_user(
 ) -> User:
     """
     Decodes and verifies Bearer token, then retrieves the authenticated user from the database.
-    Raises 401 Unauthorized if token is missing, invalid, or expired.
+    Verifies that the user is active and that any associated device has not been revoked.
+    Raises 401 Unauthorized if token is missing, invalid, expired, or originates from a revoked device.
     """
     if not token:
         raise HTTPException(
@@ -68,7 +70,37 @@ async def get_current_user(
             detail="User account is deactivated."
         )
 
+    # Device Revocation Check: If token is tied to a device, verify device is not revoked
+    device_id = payload.get("device_id")
+    if device_id:
+        dev_stmt = select(Device).where(Device.id == device_id, Device.user_id == user.id)
+        dev_result = await db.execute(dev_stmt)
+        device = dev_result.scalar_one_or_none()
+
+        if not device or device.is_revoked:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Device authorization has been revoked.",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+
     return user
+
+
+async def get_optional_current_user(
+    token: Optional[str] = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db)
+) -> Optional[User]:
+    """
+    Returns the authenticated user if a valid Bearer token is provided; otherwise returns None.
+    Used for endpoints that support both authenticated-owner actions and initial setup.
+    """
+    if not token:
+        return None
+    try:
+        return await get_current_user(token=token, db=db)
+    except HTTPException:
+        return None
 
 
 async def get_current_active_user(

@@ -2,8 +2,10 @@
 Authentication and device management business logic service.
 """
 
+import asyncio
+import secrets
 from datetime import datetime, timezone
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -32,6 +34,10 @@ from shared.schemas.device import DeviceRegisterRequest
 logger = get_logger("authentication.service")
 settings = get_settings()
 
+# Mutex and locks dictionary for serializing concurrent refresh token operations
+_refresh_locks: Dict[str, asyncio.Lock] = {}
+_refresh_lock_mutex = asyncio.Lock()
+
 
 def _ensure_utc(dt: Optional[datetime]) -> Optional[datetime]:
     """Helper to ensure a datetime from database has UTC timezone info."""
@@ -50,14 +56,23 @@ class AuthenticationError(AppException):
 
 class RegistrationClosedError(AppException):
     """Raised when registration is attempted while closed."""
-    def __init__(self, message: str = "Public registration is disabled. LOVE assistant is operating in single-owner mode.") -> None:
+    def __init__(
+        self,
+        message: str = "Public registration is disabled. Only the assistant owner can create secondary accounts."
+    ) -> None:
         super().__init__(message=message, status_code=403)
 
 
-async def register_user(db: AsyncSession, request: UserRegisterRequest) -> User:
+async def register_user(
+    db: AsyncSession,
+    request: UserRegisterRequest,
+    creator: Optional[User] = None
+) -> User:
     """
-    Registers a new user. The first user registered automatically becomes the Owner.
-    Subsequent registrations require ALLOW_OPEN_REGISTRATION to be enabled.
+    Registers a new user.
+    - If no users exist, the first user becomes the Primary Owner.
+    - If users exist, secondary account creation requires an authenticated Owner,
+      unless ALLOW_OPEN_REGISTRATION is explicitly enabled.
     """
     # 1. Enforce password complexity
     validate_password_strength(request.password, min_length=settings.PASSWORD_MIN_LENGTH)
@@ -82,9 +97,11 @@ async def register_user(db: AsyncSession, request: UserRegisterRequest) -> User:
     is_first_owner = existing_user_count == 0
 
     if is_first_owner:
-        # Validate bootstrap setup token if configured in settings
+        # Validate bootstrap setup token with constant-time comparison if configured
         if settings.FIRST_OWNER_SETUP_TOKEN:
-            if not request.setup_token or request.setup_token != settings.FIRST_OWNER_SETUP_TOKEN:
+            if not request.setup_token or not secrets.compare_digest(
+                request.setup_token, settings.FIRST_OWNER_SETUP_TOKEN
+            ):
                 raise AppException(
                     "Invalid or missing setup token required for primary owner initialization.",
                     status_code=403
@@ -93,11 +110,14 @@ async def register_user(db: AsyncSession, request: UserRegisterRequest) -> User:
         is_verified = True
         logger.info(f"Registering primary assistant owner: {normalized_email}")
     else:
-        if not settings.ALLOW_OPEN_REGISTRATION:
+        # Secondary account creation security gate
+        is_authorized_creator = creator is not None and creator.is_owner and creator.is_active
+        if not is_authorized_creator and not settings.ALLOW_OPEN_REGISTRATION:
             raise RegistrationClosedError()
+
         is_owner = False
         is_verified = False
-        logger.info(f"Registering secondary user: {normalized_email}")
+        logger.info(f"Registering secondary user: {normalized_email} (authorized by owner: {bool(creator)})")
 
     # 5. Hash password using Argon2id
     password_hash = hash_password(request.password)
@@ -134,6 +154,7 @@ async def authenticate_user(
     """
     Authenticates user credentials, registers/updates device, and issues access & refresh tokens.
     Applies sliding window rate limiting to mitigate brute-force attacks.
+    Blocks authentication attempts originating from revoked devices.
     """
     # 1. Rate Limiting Check
     rate_key = f"ip:{client_ip}"
@@ -192,7 +213,7 @@ async def authenticate_user(
     user.credential.locked_until = None
     user.credential.last_login_at = now
 
-    # 7. Device Registration / Lookup (if identifier supplied)
+    # 7. Device Verification / Registration
     device: Optional[Device] = None
     if request.device_identifier:
         dev_stmt = select(Device).where(
@@ -201,6 +222,10 @@ async def authenticate_user(
         )
         dev_result = await db.execute(dev_stmt)
         device = dev_result.scalar_one_or_none()
+
+        # Enforce device revocation: Revoked devices cannot authenticate
+        if device and device.is_revoked:
+            raise AppException("This device has been revoked and is blocked from authentication.", status_code=403)
 
         device_name = request.device_name or (device.device_name if device else "Unknown Client")
         device_type = (request.device_type.value if request.device_type else (device.device_type if device else DeviceType.OTHER.value))
@@ -211,8 +236,6 @@ async def authenticate_user(
             device.client_version = request.client_version or device.client_version
             device.last_ip_address = client_ip
             device.last_seen_at = now
-            device.is_revoked = False
-            device.revoked_at = None
         else:
             device = Device(
                 user_id=user.id,
@@ -267,6 +290,7 @@ async def refresh_session(
     """
     Validates refresh token, executes token rotation, and detects token reuse attacks.
     If a revoked or already rotated token is presented, all active sessions for the device/user are revoked.
+    Protected by per-JTI concurrency lock to prevent race conditions during concurrent refresh requests.
     """
     # 1. Decode and validate token claims (iss, aud, exp, type)
     payload = decode_token(refresh_token_str, expected_type=TokenType.REFRESH)
@@ -277,93 +301,115 @@ async def refresh_session(
     if not jti or not user_id:
         raise InvalidTokenError("Malformed refresh token payload.")
 
-    # 2. Look up session by JTI
-    stmt = select(RefreshTokenSession).where(RefreshTokenSession.jti == jti)
-    result = await db.execute(stmt)
-    session = result.scalar_one_or_none()
+    # 2. Acquire concurrency lock for this specific JTI to eliminate race conditions
+    async with _refresh_lock_mutex:
+        if jti not in _refresh_locks:
+            _refresh_locks[jti] = asyncio.Lock()
+        jti_lock = _refresh_locks[jti]
 
-    if not session:
-        logger.warning(f"Refresh attempt with non-existent JTI {jti}")
-        raise InvalidTokenError("Session not found or expired.")
+    async with jti_lock:
+        try:
+            # 3. Look up session by JTI
+            stmt = select(RefreshTokenSession).where(RefreshTokenSession.jti == jti)
+            result = await db.execute(stmt)
+            session = result.scalar_one_or_none()
 
-    # 3. Token Reuse Detection
-    if session.is_revoked:
-        logger.critical(
-            f"SECURITY ALERT: Refresh token reuse detected! JTI {jti} for user {user_id}. "
-            f"Revoking all active sessions for device {device_id or 'unknown'}."
-        )
-        # Invalidate all active sessions for this device to contain breach
-        now = datetime.now(timezone.utc)
-        revoke_query = select(RefreshTokenSession).where(
-            RefreshTokenSession.user_id == user_id,
-            RefreshTokenSession.is_revoked == False
-        )
-        if device_id:
-            revoke_query = revoke_query.where(RefreshTokenSession.device_id == device_id)
+            if not session:
+                logger.warning(f"Refresh attempt with non-existent JTI {jti}")
+                raise InvalidTokenError("Session not found or expired.")
 
-        active_sessions = (await db.execute(revoke_query)).scalars().all()
-        for s in active_sessions:
-            s.is_revoked = True
-            s.revoked_at = now
-        await db.commit()
-        raise InvalidTokenError("Token has already been used or revoked. For your security, all active sessions on this device have been terminated.")
+            # 4. Token Reuse Detection
+            if session.is_revoked:
+                logger.critical(
+                    f"SECURITY ALERT: Refresh token reuse detected! JTI {jti} for user {user_id}. "
+                    f"Revoking all active sessions for device {device_id or 'unknown'}."
+                )
+                now = datetime.now(timezone.utc)
+                revoke_query = select(RefreshTokenSession).where(
+                    RefreshTokenSession.user_id == user_id,
+                    RefreshTokenSession.is_revoked == False
+                )
+                if device_id:
+                    revoke_query = revoke_query.where(RefreshTokenSession.device_id == device_id)
 
-    # 4. Verify token hash
-    if session.token_hash != hash_token(refresh_token_str):
-        logger.warning(f"Token hash mismatch for JTI {jti}")
-        session.is_revoked = True
-        session.revoked_at = datetime.now(timezone.utc)
-        await db.commit()
-        raise InvalidTokenError("Token verification failed.")
+                active_sessions = (await db.execute(revoke_query)).scalars().all()
+                for s in active_sessions:
+                    s.is_revoked = True
+                    s.revoked_at = now
+                await db.commit()
+                raise InvalidTokenError("Token has already been used or revoked. For your security, all active sessions on this device have been terminated.")
 
-    # 5. Check database expiration
-    now = datetime.now(timezone.utc)
-    expires_at = _ensure_utc(session.expires_at)
-    if expires_at and expires_at < now:
-        session.is_revoked = True
-        session.revoked_at = now
-        await db.commit()
-        raise TokenExpiredError("Refresh token has expired.")
+            # 5. Verify token hash
+            if session.token_hash != hash_token(refresh_token_str):
+                logger.warning(f"Token hash mismatch for JTI {jti}")
+                session.is_revoked = True
+                session.revoked_at = datetime.now(timezone.utc)
+                await db.commit()
+                raise InvalidTokenError("Token verification failed.")
 
-    # 6. Verify user is active
-    user_stmt = select(User).where(User.id == user_id)
-    user = (await db.execute(user_stmt)).scalar_one_or_none()
-    if not user or not user.is_active:
-        raise AppException("User account is inactive or deleted.", status_code=403)
+            # 6. Check database expiration
+            now = datetime.now(timezone.utc)
+            expires_at = _ensure_utc(session.expires_at)
+            if expires_at and expires_at < now:
+                session.is_revoked = True
+                session.revoked_at = now
+                await db.commit()
+                raise TokenExpiredError("Refresh token has expired.")
 
-    # 7. Token Rotation: Issue new access token and new refresh token
-    new_access_token, access_exp = create_access_token(
-        user_id=user.id,
-        email=user.email,
-        is_owner=user.is_owner,
-        device_id=device_id
-    )
-    new_refresh_token, new_jti, refresh_exp = create_refresh_token(
-        user_id=user.id,
-        device_id=device_id
-    )
+            # 7. Verify device is not revoked
+            if device_id:
+                dev_stmt = select(Device).where(Device.id == device_id, Device.user_id == user_id)
+                dev_res = await db.execute(dev_stmt)
+                dev = dev_res.scalar_one_or_none()
+                if not dev or dev.is_revoked:
+                    session.is_revoked = True
+                    session.revoked_at = now
+                    await db.commit()
+                    raise InvalidTokenError("The device associated with this session has been revoked.")
 
-    # 8. Mark old session as rotated and record successor JTI
-    session.is_revoked = True
-    session.revoked_at = now
-    session.replaced_by_jti = new_jti
+            # 8. Verify user is active
+            user_stmt = select(User).where(User.id == user_id)
+            user = (await db.execute(user_stmt)).scalar_one_or_none()
+            if not user or not user.is_active:
+                raise AppException("User account is inactive or deleted.", status_code=403)
 
-    # 9. Store new session
-    new_session = RefreshTokenSession(
-        user_id=user.id,
-        device_id=device_id,
-        jti=new_jti,
-        token_hash=hash_token(new_refresh_token),
-        expires_at=refresh_exp,
-        is_revoked=False,
-        user_agent=user_agent,
-        ip_address=client_ip,
-    )
-    db.add(new_session)
-    await db.commit()
+            # 9. Token Rotation: Issue new access token and new refresh token
+            new_access_token, access_exp = create_access_token(
+                user_id=user.id,
+                email=user.email,
+                is_owner=user.is_owner,
+                device_id=device_id
+            )
+            new_refresh_token, new_jti, refresh_exp = create_refresh_token(
+                user_id=user.id,
+                device_id=device_id
+            )
 
-    expires_in_seconds = int((access_exp - now).total_seconds())
-    return new_access_token, new_refresh_token, expires_in_seconds
+            # 10. Mark old session as rotated and record successor JTI
+            session.is_revoked = True
+            session.revoked_at = now
+            session.replaced_by_jti = new_jti
+
+            # 11. Store new session
+            new_session = RefreshTokenSession(
+                user_id=user.id,
+                device_id=device_id,
+                jti=new_jti,
+                token_hash=hash_token(new_refresh_token),
+                expires_at=refresh_exp,
+                is_revoked=False,
+                user_agent=user_agent,
+                ip_address=client_ip,
+            )
+            db.add(new_session)
+            await db.commit()
+
+            expires_in_seconds = int((access_exp - now).total_seconds())
+            return new_access_token, new_refresh_token, expires_in_seconds
+
+        finally:
+            async with _refresh_lock_mutex:
+                _refresh_locks.pop(jti, None)
 
 
 async def logout_session(
@@ -388,7 +434,6 @@ async def logout_session(
             await db.commit()
             logger.info(f"Revoked refresh session {session.jti} for user {user_id}")
     else:
-        # Revoke all active sessions for the user
         stmt = select(RefreshTokenSession).where(
             RefreshTokenSession.user_id == user_id,
             RefreshTokenSession.is_revoked == False
@@ -415,6 +460,13 @@ async def register_or_update_device(
     result = await db.execute(stmt)
     device = result.scalar_one_or_none()
 
+    # Enforce device revocation: Revoked device identifiers cannot be re-registered
+    if device and device.is_revoked:
+        raise AppException(
+            "This device has been revoked. Re-registration with a revoked device identifier is prohibited.",
+            status_code=403
+        )
+
     now = datetime.now(timezone.utc)
     if device:
         device.device_name = request.device_name
@@ -422,8 +474,6 @@ async def register_or_update_device(
         device.client_version = request.client_version or device.client_version
         device.last_ip_address = client_ip or device.last_ip_address
         device.last_seen_at = now
-        device.is_revoked = False
-        device.revoked_at = None
     else:
         device = Device(
             user_id=user_id,

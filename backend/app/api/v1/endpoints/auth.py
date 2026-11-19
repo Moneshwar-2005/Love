@@ -7,7 +7,10 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Header, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.authentication.dependencies import get_current_active_user
+from backend.app.authentication.dependencies import (
+    get_current_active_user,
+    get_optional_current_user,
+)
 from backend.app.authentication.service import (
     authenticate_user,
     logout_session,
@@ -35,14 +38,15 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Register User / Initialize Owner",
-    description="Registers a new user account. The first registered account automatically becomes the Assistant Owner. Subsequent registrations are disabled unless open registration is enabled."
+    description="Registers a new user account. The first registered account automatically becomes the Assistant Owner. Subsequent registrations require Owner authorization unless open registration is enabled."
 )
 async def register(
     request: UserRegisterRequest,
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> UserResponse:
-    """Register initial owner or subsequent user."""
-    user = await register_user(db=db, request=request)
+    """Register initial owner or secondary user."""
+    user = await register_user(db=db, request=request, creator=current_user)
     return UserResponse.model_validate(user)
 
 
