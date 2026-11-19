@@ -22,3 +22,18 @@ class DatabaseStatus(str, Enum):
     CONNECTED = "connected"
     DISCONNECTED = "disconnected"
     ERROR = "error"
+
+
+class DeviceType(str, Enum):
+    WINDOWS = "windows"
+    MACOS = "macos"
+    LINUX = "linux"
+    ANDROID = "android"
+    IOS = "ios"
+    WEB = "web"
+    OTHER = "other"
+
+
+class TokenType(str, Enum):
+    ACCESS = "access"
+    REFRESH = "refresh"

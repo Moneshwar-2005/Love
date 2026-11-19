@@ -3,6 +3,7 @@ Database layer for LOVE.
 """
 
 from backend.app.database.base import Base, TimestampMixin
+from backend.app.database.models import Device, RefreshTokenSession, User, UserCredential
 from backend.app.database.session import (
     AsyncSessionLocal,
     check_database_connection,
@@ -15,6 +16,10 @@ from backend.app.database.session import (
 __all__ = [
     "Base",
     "TimestampMixin",
+    "User",
+    "UserCredential",
+    "Device",
+    "RefreshTokenSession",
     "AsyncSessionLocal",
     "check_database_connection",
     "close_database_connection",

@@ -6,11 +6,18 @@ uvicorn[standard]>=0.30.0
 pydantic>=2.8.0
 pydantic-settings>=2.4.0
 python-dotenv>=1.0.0
+email-validator>=2.2.0
 
 # Database & ORM (Async SQLAlchemy)
 sqlalchemy[asyncio]>=2.0.30
 greenlet>=3.0.0
 aiosqlite>=0.20.0
+alembic>=1.13.0
+
+# Security & Authentication
+argon2-cffi>=23.1.0
+pyjwt>=2.8.0
+cryptography>=43.0.0
 
 # Testing & Quality Assurance
 pytest>=8.3.0

@@ -3,8 +3,9 @@
 [![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg)](https://fastapi.tiangolo.com/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0%2B%20(Async)-red.svg)](https://www.sqlalchemy.org/)
+[![Alembic](https://img.shields.io/badge/Alembic-1.13%2B-8A2BE2.svg)](https://alembic.sqlalchemy.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/Phase%2001.5-Audit%20%26%20Cleanup%20Completed-brightgreen.svg)]()
+[![Status](https://img.shields.io/badge/Phase%2002-Authentication%20%26%20Security%20Completed-brightgreen.svg)]()
 
 > **LOVE** is an independent, modular, extensible, multi-platform personal AI assistant ecosystem inspired by the capabilities of Iron Man's JARVIS and FRIDAY.
 
@@ -13,8 +14,6 @@ LOVE is engineered as a general-purpose, persistent, and intelligent companion c
 ---
 
 ## 1. Permanent Capability Pillars
-
-LOVE is designed around 14 permanent core capabilities:
 
 1. **General Intelligent Conversations:** High-context, fluid multi-turn natural dialogue.
 2. **Software Development & Programming:** Multi-language code authoring, refactoring, and architecture.
@@ -33,98 +32,39 @@ LOVE is designed around 14 permanent core capabilities:
 
 ---
 
-## 2. Universal Intelligence Layer (UIL)
+## 2. Authentication, User Identity & Device Security (Phase 02)
 
-The cognitive core of LOVE features a dedicated **Universal Intelligence Layer** responsible for orchestrating intelligence:
-- **Intent Recognition:** Categorizes input queries and dispatches specialized execution paths.
-- **Model Routing:** Intelligently routes tasks to local GGUF models (privacy/offline) or frontier cloud models (reasoning/scale).
-- **Reasoning & Planning:** Formulates multi-step execution plans with self-refining feedback loops.
-- **Specialized Agent Orchestration:** Coordinates specialized agents (coding, debugging, research, automation).
-- **Tool Integration & Sandbox:** Safely executes system tools within secure sandbox boundaries.
-- **Project Workspace Management:** Tracks project workspaces, file trees, and git working states.
-- **Human Approval Controls:** Enforces interactive permission gates for privileged or destructive operations.
-- **Action History & Audit Logger:** Maintains an immutable action ledger for full accountability and rollback.
+- **Argon2id Password Hashing:** OWASP-compliant parameter profile with random per-credential salt.
+- **Dual-Token Lifecycle:** Cryptographically signed JWT access tokens paired with **hashed refresh tokens (SHA-256)**.
+- **Refresh Token Rotation & Reuse Detection:** Immediate revocation of all active sessions if an already rotated token is presented.
+- **Brute Force Protection:** In-memory sliding-window rate limiting on login attempts.
+- **First-Owner Bootstrap Architecture:** The first registered account automatically becomes Owner; public signup automatically closes.
+- **Multi-Platform Device Security:** Client installation UUID identification, device authorization, and remote session termination across Windows, macOS, Linux, Android, iOS, and Web.
+- **Database Migrations:** Automated schema versioning via **Alembic** supporting async SQLite and PostgreSQL.
 
 ---
 
-## 3. Official Voice Specification
+## 3. Implemented API Endpoints
 
-- **Name:** LOVE
-- **Identity Style:** Hybrid Cinematic + Natural (JARVIS/FRIDAY poise combined with human warmth).
-- **Gender:** Female
-- **Accent:** Indian English (articulate, elegant, cultured)
-- **Personality:** Intelligent, elegant, calm, confident, and proactive.
-- **Implementation Strategy:**
-  - *Cloud TTS (Primary):* Azure Speech Services (`en-IN-NeerjaNeural` / `en-IN-KavyaNeural`).
-  - *Cloud TTS (Alternative):* ElevenLabs expressive voice cloning.
-  - *Offline Local TTS:* Piper neural TTS engine.
-  - *Speech-to-Text (STT):* `faster-whisper` on-device speech recognition.
-  - *Wake-Word:* `openWakeWord` ("Hey Love") for instant on-device activation.
-  - *Coupling Guarantee:* The voice engine is completely decoupled from the LLM core.
+### Authentication & Identity
+- `POST /api/v1/auth/register` — Register primary owner / user
+- `POST /api/v1/auth/login` — Authenticate and obtain JWT token pair
+- `POST /api/v1/auth/refresh` — Rotate refresh token and obtain new access token
+- `POST /api/v1/auth/logout` — Revoke active session (Authenticated)
+- `GET /api/v1/auth/me` — Retrieve current authenticated user profile (Authenticated)
 
-*See [documentation/VOICE_SPECIFICATION.md](documentation/VOICE_SPECIFICATION.md) for full acoustic specifications.*
+### Device Security
+- `POST /api/v1/devices/register` — Register or update client device (Authenticated)
+- `GET /api/v1/devices` — List user's registered devices (Authenticated)
+- `DELETE /api/v1/devices/{device_id}` — Revoke device authorization and terminate sessions (Authenticated)
 
----
-
-## 4. Project Structure
-
-```text
-LOVE/
-├── backend/                  # Backend application source code
-│   ├── app/
-│   │   ├── api/              # Versioned API routes (v1)
-│   │   │   └── v1/
-│   │   │       ├── endpoints/
-│   │   │       │   └── health.py
-│   │   │       └── api.py
-│   │   ├── authentication/   # Auth & device pairing (Phase 02)
-│   │   ├── automation/       # Desktop automation (Phase 07)
-│   │   ├── config/           # Pydantic settings & environment manager
-│   │   ├── core/             # Logging, exceptions, and middlewares
-│   │   ├── database/         # Async engine, sessionmaker, and Base
-│   │   ├── intelligence/     # Universal Intelligence Layer (Phase 03)
-│   │   ├── memory/           # Persistent vector memory (Phase 04)
-│   │   ├── productivity/     # Tasks & reminders (Phase 06)
-│   │   ├── security/         # Cryptography & sandboxing (Phase 08)
-│   │   ├── synchronization/  # Cross-device sync (Phase 09)
-│   │   ├── voice/            # Wake-word & TTS engine (Phase 05)
-│   │   └── main.py           # FastAPI entrypoint
-│   └── requirements.txt
-├── desktop/                  # Tauri desktop application (future)
-├── web/                      # React + TypeScript web application (future)
-├── mobile/                   # Flutter iOS/Android application (future)
-├── shared/                   # Schemas and constants shared across platforms
-│   ├── constants.py
-│   └── schemas/
-│       └── health.py
-├── models/                   # Local GGUF, tokenizer, and acoustic model weights
-├── database/                 # SQLite storage and Alembic migrations
-│   ├── migrations/
-│   │   └── .gitkeep
-│   └── README.md
-├── scripts/                  # Operational utility scripts
-│   ├── init_db.py            # Database initialization and connectivity test
-│   └── run_server.py         # Development server launcher
-├── tests/                    # Automated pytest suite
-│   ├── conftest.py           # Test fixtures and in-memory DB configuration
-│   ├── test_config.py        # Settings and environment variable tests
-│   ├── test_database.py      # Database session and query tests
-│   └── test_health.py        # Health API validation tests
-├── documentation/            # Comprehensive documentation
-│   ├── ARCHITECTURE.md       # Full architecture specification
-│   ├── DEVELOPMENT_GUIDE.md  # Local setup & developer workflow
-│   ├── PROJECT_STATUS.md     # Roadmap, status & verification logs
-│   └── VOICE_SPECIFICATION.md# Official voice pipeline architecture
-├── archive/                  # Preserved legacy experimental artifacts
-├── .env.example              # Environment configuration template
-├── .gitignore                # Git ignore rules
-├── pyproject.toml            # Project build configuration & pytest settings
-└── requirements.txt          # Root Python dependencies
-```
+### System & Health
+- `GET /health` / `GET /api/v1/health` — Subsystem liveness, uptime, and DB latency
+- `GET /` — Basic application identity
 
 ---
 
-## 5. Quickstart Guide
+## 4. Quickstart Guide
 
 ### 1. Setup Virtual Environment
 ```bash
@@ -146,12 +86,13 @@ source .venv/bin/activate
 uv pip install -r requirements.txt
 ```
 
-### 3. Initialize Database & Run
+### 3. Run Database Migrations
 ```bash
-# Initialize local SQLite database
-python scripts/init_db.py
+.\.venv\Scripts\alembic.exe upgrade head
+```
 
-# Launch development server
+### 4. Launch Server
+```bash
 python scripts/run_server.py
 ```
 
@@ -159,16 +100,18 @@ python scripts/run_server.py
 - **Interactive Swagger Docs:** `http://127.0.0.1:8000/docs`
 - **Health Check Endpoint:** `http://127.0.0.1:8000/api/v1/health`
 
-### 4. Run Automated Tests
+### 5. Run Automated Tests
 ```bash
 pytest -v
 ```
+*(All 33 tests execute in-memory with zero side effects).*
 
 ---
 
-## 6. Project Independence Guarantee
+## 5. Official Voice Specification
 
-LOVE is an entirely standalone, greenfield ecosystem:
-- Completely isolated from legacy projects (including KURO and FRIDAY).
-- Dedicated namespace (`love.*`), isolated database (`database/love.db`), and distinct configuration environment.
-- All secrets and API credentials reside strictly in local `.env` variables and are never committed.
+- **Assistant Name:** LOVE
+- **Vocal Style:** Hybrid Cinematic + Natural (JARVIS/FRIDAY poise + human warmth and cadence).
+- **Gender:** Female
+- **Accent:** Indian English (articulate, cultured, urban Indian English).
+- **Implementation:** Azure Speech Services (primary cloud), ElevenLabs (secondary cloud), Piper (local offline), `faster-whisper` (STT), `openWakeWord` ("Hey Love").

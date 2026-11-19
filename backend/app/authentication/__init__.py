@@ -1,11 +1,43 @@
 """
-Authentication Module (Planned for Phase 02+).
-
-Architectural Scope:
-- User identity management and access control.
-- JWT and session token issuance, validation, and refresh flows.
-- Device authorization and pairing for cross-device desktop/mobile/web access.
-- Role-based and scope-based permissions.
+Authentication and User Identity Module for LOVE.
 """
 
-__all__ = []
+from backend.app.authentication.dependencies import (
+    get_current_active_user,
+    get_current_owner,
+    get_current_user,
+    oauth2_scheme,
+)
+from backend.app.authentication.models import (
+    Device,
+    RefreshTokenSession,
+    User,
+    UserCredential,
+)
+from backend.app.authentication.service import (
+    authenticate_user,
+    list_user_devices,
+    logout_session,
+    refresh_session,
+    register_or_update_device,
+    register_user,
+    revoke_user_device,
+)
+
+__all__ = [
+    "User",
+    "UserCredential",
+    "Device",
+    "RefreshTokenSession",
+    "register_user",
+    "authenticate_user",
+    "refresh_session",
+    "logout_session",
+    "register_or_update_device",
+    "list_user_devices",
+    "revoke_user_device",
+    "get_current_user",
+    "get_current_active_user",
+    "get_current_owner",
+    "oauth2_scheme",
+]

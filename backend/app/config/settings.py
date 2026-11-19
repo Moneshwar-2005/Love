@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # Application Metadata
     APP_NAME: str = Field(default="LOVE Personal AI Assistant", description="Application name")
     APP_ENV: str = Field(default="development", description="Runtime environment: development, staging, production, testing")
-    APP_VERSION: str = Field(default="0.1.0", description="Application version")
+    APP_VERSION: str = Field(default="0.2.0", description="Application version")
     DEBUG: bool = Field(default=True, description="Enable debug mode")
 
     # Server Configuration
@@ -33,15 +33,49 @@ class Settings(BaseSettings):
     WORKERS: int = Field(default=1, description="Number of Uvicorn worker processes")
     RELOAD: bool = Field(default=True, description="Enable Uvicorn auto-reload")
 
-    # Security & Authentication
+    # Security & Cryptography
     SECRET_KEY: str = Field(
         default="love-dev-secret-key-replace-in-production-min-32-chars",
         description="Cryptographic secret key for signing tokens and sessions"
     )
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
-        default=1440,
-        description="Access token lifespan in minutes (default: 24 hours)"
+    JWT_SECRET_KEY: str = Field(
+        default="",
+        description="Dedicated JWT secret key (falls back to SECRET_KEY if empty)"
     )
+    JWT_ALGORITHM: str = Field(default="HS256", description="JWT signing algorithm")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
+        default=60,
+        description="Access token lifespan in minutes (default: 1 hour)"
+    )
+    REFRESH_TOKEN_EXPIRE_DAYS: int = Field(
+        default=14,
+        description="Refresh token lifespan in days (default: 14 days)"
+    )
+    JWT_ISSUER: str = Field(default="love-assistant", description="JWT issuer claim (iss)")
+    JWT_AUDIENCE: str = Field(default="love-client", description="JWT audience claim (aud)")
+
+    # Registration & Initial Owner Setup
+    ALLOW_OPEN_REGISTRATION: bool = Field(
+        default=False,
+        description="Whether to permit multi-user registrations after the primary owner account is created"
+    )
+    FIRST_OWNER_SETUP_TOKEN: str = Field(
+        default="",
+        description="Optional pre-shared setup token required for initial owner registration"
+    )
+    PASSWORD_MIN_LENGTH: int = Field(default=8, description="Minimum password length")
+
+    # Rate Limiting
+    LOGIN_RATE_LIMIT_MAX_ATTEMPTS: int = Field(
+        default=5,
+        description="Maximum failed login attempts within the rate-limit window"
+    )
+    LOGIN_RATE_LIMIT_WINDOW_SECONDS: int = Field(
+        default=300,
+        description="Login rate limit window in seconds (default: 5 minutes)"
+    )
+
+    # CORS
     CORS_ORIGINS: Union[List[str], str] = Field(
         default=[
             "http://localhost:3000",
@@ -80,6 +114,11 @@ class Settings(BaseSettings):
         elif isinstance(v, (list, tuple)):
             return list(v)
         return []
+
+    @property
+    def effective_jwt_secret(self) -> str:
+        """Returns JWT_SECRET_KEY if configured, otherwise falls back to SECRET_KEY."""
+        return self.JWT_SECRET_KEY if self.JWT_SECRET_KEY else self.SECRET_KEY
 
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE) if ENV_FILE.exists() else None,

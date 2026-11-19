@@ -11,7 +11,7 @@ def test_default_settings():
     """Verify default configuration attributes are correctly populated."""
     settings = Settings()
     assert settings.APP_NAME == "LOVE Personal AI Assistant"
-    assert settings.APP_VERSION == "0.1.0"
+    assert settings.APP_VERSION == "0.2.0"
     assert isinstance(settings.PORT, int)
     assert isinstance(settings.DEBUG, bool)
     assert settings.DATABASE_URL.startswith("sqlite")

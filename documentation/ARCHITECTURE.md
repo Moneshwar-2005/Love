@@ -17,121 +17,112 @@ LOVE functions as a general-purpose, persistent, and intelligent companion capab
 
 ## 2. Permanent Core Capabilities
 
-LOVE is designed to fulfill 14 permanent capability pillars:
+LOVE is designed around 14 permanent core capabilities:
 
-```mermaid
-flowchart TD
-    Core["LOVE Personal Assistant"]
-    
-    subgraph Cognition["Cognitive & Language Capabilities"]
-        C1["1. General Intelligent Conversations"]
-        C7["7. Research & Problem Solving"]
-        C6["6. Document Creation & Analysis"]
-        C5["5. Image & Creative Assistance"]
-    end
-    
-    subgraph Engineering["Engineering & Development"]
-        C2["2. Software Development & Programming"]
-        C3["3. Website & Application Development"]
-        C4["4. Debugging & Code Analysis"]
-    end
-    
-    subgraph Execution["Execution & Productivity"]
-        C8["8. Personal Productivity & Reminders"]
-        C9["9. File & Workspace Operations"]
-        C10["10. Desktop & OS Automation"]
-    end
-    
-    subgraph Infrastructure["Infrastructure & Interaction"]
-        C11["11. Local & Cloud AI Models"]
-        C12["12. Persistent Personal Memory"]
-        C13["13. Voice Interaction ('Hey Love')"]
-        C14["14. Cross-Device Synchronization"]
-    end
-
-    Core --> Cognition
-    Core --> Engineering
-    Core --> Execution
-    Core --> Infrastructure
-```
-
-1. **General Intelligent Conversations:** Natural, context-rich multi-turn dialogues with dynamic personality adaptation.
-2. **Software Development & Programming:** Multi-language code authoring, refactoring, test generation, and architectural design.
-3. **Website & Application Development:** Full-stack development capabilities covering modern frontend, backend, and database paradigms.
-4. **Debugging & Code Analysis:** Automated stack-trace diagnostics, syntax checking, security auditing, and performance profiling.
-5. **Image & Creative Assistance:** Image generation, editing pipelines, SVG authoring, UI wireframing, and creative drafting.
-6. **Document Creation & Analysis:** Parsing, synthesis, and authoring of Markdown, PDF, Office documents, and structured reports.
-7. **Research & Problem Solving:** Deep web exploration, multi-source literature synthesis, citations, and analytical deduction.
-8. **Personal Productivity:** Context-aware task lists, reminders, calendars, schedules, and proactive morning briefings.
-9. **File Operations:** Intelligent file search, bulk organization, content-based deduplication, and workspace manipulation.
-10. **Desktop Automation:** Multi-platform OS interaction, window management, screen inspection, and controlled shell scripting.
-11. **Local & Cloud AI Models:** Fluid routing between on-device models (via GGUF / llama.cpp) and frontier cloud models (Gemini, Claude, OpenAI).
-12. **Persistent Personal Memory:** Multi-tiered memory combining working context, episodic history, and semantic vector embeddings.
-13. **Voice Interaction:** Ultra-low latency voice loop with "Hey Love" wake-word activation and an Indian English female acoustic profile.
-14. **Cross-Device Availability:** Synchronized state across desktop, browser, and mobile devices with end-to-end encryption.
+1. **General Intelligent Conversations:** High-context, fluid multi-turn natural dialogue.
+2. **Software Development & Programming:** Multi-language code authoring, refactoring, and architecture.
+3. **Website & Application Development:** Full-stack development across web, desktop, and mobile.
+4. **Debugging & Code Analysis:** Automated diagnostics, syntax auditing, and optimization.
+5. **Image & Creative Assistance:** Multimodal generation, editing, SVG design, and wireframing.
+6. **Document Creation & Analysis:** Comprehensive synthesis and generation of Markdown, PDF, and reports.
+7. **Research & Problem Solving:** Deep-dive literature retrieval, citation validation, and analytical synthesis.
+8. **Personal Productivity:** Contextual task management, reminders, scheduling, and morning briefings.
+9. **File Operations:** Intelligent file search, workspace organization, and bulk content manipulation.
+10. **Desktop Automation:** Multi-platform OS interaction, window management, and controlled scripting.
+11. **Local & Cloud AI Models:** Dynamic routing between on-device GGUF models and frontier cloud LLMs.
+12. **Persistent Personal Memory:** Working context, episodic recall, and semantic vector embeddings.
+13. **Voice Interaction:** Ultra-low latency voice loop with "Hey Love" wake-word activation.
+14. **Cross-Device Availability:** Synchronized state across desktop, web, and mobile with E2EE.
 
 ---
 
-## 3. High-Level Ecosystem Topology
+## 3. Authentication, User Identity & Device Security (Phase 02)
+
+LOVE is architected as a **single-owner personal assistant ecosystem** supporting multiple authorized devices across desktop, mobile, and web.
+
+### A. Authentication Entity-Relationship Model
 
 ```mermaid
-flowchart TD
-    subgraph Clients["Client Layer (Multi-Platform)"]
-        Desk["Desktop App (Tauri / Rust + React)"]
-        Web["Web Dashboard (React + TypeScript + Vite)"]
-        Mob["Mobile App (Flutter / iOS & Android)"]
-    end
+erDiagram
+    User ||--o| UserCredential : "authenticates via"
+    User ||--o{ Device : "authorizes"
+    User ||--o{ RefreshTokenSession : "owns sessions"
+    Device ||--o{ RefreshTokenSession : "originates"
 
-    subgraph Gateway["API & Transport Gateway"]
-        CORS["CORS & Request Middleware"]
-        Router["FastAPI Application Router"]
-        WS["WebSocket Duplex Audio/Text Server"]
-    end
+    User {
+        string id PK "UUID (36)"
+        string email UK "Indexed"
+        string username UK "Indexed"
+        string full_name "Nullable"
+        boolean is_active "Default true"
+        boolean is_verified "Default false"
+        boolean is_owner "Assistant primary owner"
+        datetime created_at
+        datetime updated_at
+    }
 
-    subgraph UIL["Universal Intelligence Layer"]
-        Intent["Intent Recognition"]
-        RouterLLM["Model Router (Local / Cloud)"]
-        Planner["Reasoning & Planning Engine"]
-        Orchestrator["Specialized Agent Orchestrator"]
-        Tools["Tool Integration & Execution Sandbox"]
-        Workspace["Project Workspace Manager"]
-        Approval["Human Approval Controls"]
-        History["Action History & Audit Logger"]
-    end
+    UserCredential {
+        string id PK "UUID (36)"
+        string user_id FK "Users.id ON DELETE CASCADE"
+        string password_hash "Argon2id Hash"
+        integer failed_login_attempts "Brute force counter"
+        datetime locked_until "Account lockout"
+        datetime last_login_at
+        datetime password_changed_at
+    }
 
-    subgraph Subsystems["Core LOVE Subsystems"]
-        Auth["Authentication & Device Pairing"]
-        Mem["Memory Engine (Episodic & Vector RAG)"]
-        Voice["Voice Engine ('Hey Love' STT/TTS)"]
-        Prod["Productivity & Reminder Engine"]
-        Auto["Desktop Automation Engine"]
-        Sync["Cross-Device State Sync"]
-    end
+    Device {
+        string id PK "UUID (36)"
+        string user_id FK "Users.id ON DELETE CASCADE"
+        string device_identifier "Client installation UUID"
+        string device_name "Friendly label"
+        string device_type "windows, macos, linux, android, ios, web"
+        string client_version "App build version"
+        boolean is_trusted "Default true"
+        boolean is_revoked "Revocation flag"
+        datetime revoked_at
+        string last_ip_address
+        datetime last_seen_at
+        datetime created_at
+        datetime updated_at
+    }
 
-    subgraph Persistence["Storage & Weights"]
-        DB[("Database (SQLite / PostgreSQL)")]
-        Models["Model Storage (GGUF, Safetensors, Acoustic)"]
-        Cache[("In-Memory State & Cache")]
-    end
-
-    Desk -->|HTTP / WS| Gateway
-    Web -->|HTTP / WS| Gateway
-    Mob -->|HTTP / WS| Gateway
-
-    Gateway --> Router
-    Router --> UIL
-    Router --> Subsystems
-
-    UIL --> Subsystems
-    UIL --> Tools
-    Tools --> Workspace
-    Tools --> Approval
-    Approval --> History
-
-    Subsystems --> DB
-    Subsystems --> Models
-    Subsystems --> Cache
+    RefreshTokenSession {
+        string id PK "UUID (36)"
+        string user_id FK "Users.id ON DELETE CASCADE"
+        string device_id FK "Devices.id ON DELETE CASCADE"
+        string jti UK "JWT Token ID"
+        string token_hash "SHA-256 Digest"
+        datetime expires_at "Indexed"
+        boolean is_revoked "Default false"
+        datetime revoked_at
+        string replaced_by_jti "Successor JTI"
+        string user_agent
+        string ip_address
+        datetime created_at
+    }
 ```
+
+### B. Security Architecture & Cryptographic Controls:
+1. **Argon2id Password Hashing:**
+   - Password hashes use the official Argon2id profile (`time_cost=2`, `memory_cost=65536 KiB`, `parallelism=1`, `hash_len=32`).
+   - Resistant to GPU, ASIC, and side-channel timing attacks.
+   - Plaintext passwords are never logged or stored.
+2. **Dual-Token Lifecycle with Cryptographic Rotation:**
+   - **Access Token:** Short-lived JWT (default 60 minutes) containing signed identity claims (`sub`, `email`, `is_owner`, `device_id`, `iss`, `aud`, `exp`, `jti`).
+   - **Refresh Token:** Long-lived JWT (default 14 days) stored in the database **strictly as SHA-256 hashes**.
+   - Every refresh operation issues a brand new access token and a brand new refresh token, invalidating the previous one.
+3. **Token Reuse Detection & Automated Breach Containment:**
+   - If an already-rotated or revoked refresh token is presented, the system detects a token reuse attack (theft of an in-transit token).
+   - In response, the system immediately **revokes all active sessions for that user on that device**, halting unauthorized access.
+4. **Sliding-Window Brute Force Rate Limiting:**
+   - IP-level and account-level sliding window rate limiter protects endpoints from credential stuffing and dictionary attacks.
+   - Consecutive failures incur incremental delays and temporary lockouts.
+5. **Constant-Time Error Handling:**
+   - Login failures return a generic `"Invalid email/username or password."` message regardless of whether the username or email exists, eliminating user enumeration vectors.
+6. **First-Owner Bootstrap Architecture:**
+   - The first account registered automatically claims Owner status (`is_owner=True`).
+   - Once an owner exists, public registration automatically locks (`ALLOW_OPEN_REGISTRATION=false`), securing the personal assistant.
 
 ---
 
@@ -159,170 +150,29 @@ flowchart LR
     Audit --> UserOut["System Response & Results"]
 ```
 
-### Subsystem Components:
-
-1. **Intent Recognition:**
-   - Evaluates incoming conversational turns, voice utterances, and events.
-   - Dispatches tasks into conversational queries, coding tasks, research queries, productivity items, or system commands.
-2. **Model Routing:**
-   - Dynamically routes prompts based on privacy, task complexity, context length, network availability, and latency tolerance:
-     - *Zero-latency / Offline / Sensitive:* Local GGUF models via `llama.cpp` (e.g. 7B/14B Q4_K_M).
-     - *Complex Reasoning / Large Codebases / Creative:* Frontier cloud APIs (Gemini, Claude, OpenAI).
-3. **Reasoning & Planning:**
-   - Generates multi-step execution graphs (`Plan -> Execute -> Observe -> Refine`).
-   - Maintains execution state, intermediate milestones, and failure recovery trees.
-4. **Specialized Agent Orchestration:**
-   - Coordinates domain-specific worker agents:
-     - *Software Architect Agent:* Project structuring, dependency validation.
-     - *Full-Stack Coding Agent:* Implementation, unit test generation, file edits.
-     - *Code Reviewer & Debugger Agent:* Linting, syntax inspection, security audit.
-     - *Research Agent:* Information retrieval, documentation synthesis.
-     - *Automation Agent:* OS automation and shell operations.
-5. **Tool Integration:**
-   - Standardized tool interface with schema validation (Pydantic).
-   - Dynamic tool discovery, execution sandboxing, and output formatting.
-6. **Project Workspace Management:**
-   - Scoped file tree tracking, working directory persistence, git status awareness, and scratchpad management.
-7. **Human Approval Controls (Interactive Gates):**
-   - Destructive actions (e.g., file deletion, shell execution, external network calls, permission elevation) require explicit user authorization before execution.
-   - Provides clear diff views and operation previews.
-8. **Action History & Audit Logger:**
-   - Immutable audit trail recording tool invocations, user approvals, execution parameters, and status for full traceability and rollback capability.
-
 ---
 
 ## 5. Official LOVE Voice Specification
 
-The voice subsystem delivers a distinctive, elegant, and production-grade conversational experience.
-
-```mermaid
-flowchart LR
-    Mic["Microphone Stream"] --> Wake["openWakeWord ('Hey Love')"]
-    Wake --> VAD["Voice Activity Detection"]
-    VAD --> STT["faster-whisper (Local STT)"]
-    STT --> Core["LOVE Intelligence Core"]
-    Core --> Stream["Streaming Text Output"]
-    Stream --> AudioRouter["Audio TTS Router"]
-    
-    subgraph TTS_Engines["Configurable TTS Engines"]
-        Azure["Primary: Azure Speech (Indian English)"]
-        Eleven["Secondary: ElevenLabs"]
-        Piper["Offline: Piper Local TTS"]
-    end
-    
-    AudioRouter --> Azure
-    AudioRouter --> Eleven
-    AudioRouter --> Piper
-    
-    Azure --> Out["Speaker Output"]
-    Eleven --> Out
-    Piper --> Out
-```
-
-### Approved Voice Identity:
-- **Name:** LOVE
-- **Identity Style:** Hybrid Cinematic + Natural (JARVIS/FRIDAY poise combined with human warmth and cadence).
-- **Voice Gender:** Female.
-- **Accent:** Indian English (sophisticated, articulate, natural inflection).
-- **Personality Profile:** Intelligent, elegant, calm, confident, and proactive.
-- **Addressing Mode:** Speaks with concise authority, avoiding robotic boilerplate or excessive servility.
-
-### Technical Implementation Standards:
-- **Decoupled Architecture:** The voice pipeline is completely independent of the LLM engine. Voice generation and transcription operate as modular services via standard streaming interfaces (PCM/Opus over WebSockets).
-- **Wake-Word Detection:** `openWakeWord` running locally on-device for instantaneous, privacy-preserving "Hey Love" activation with negligible CPU utilization.
-- **Speech-to-Text (STT):** Local high-accuracy transcription using `faster-whisper` (CTranslate2 backend) supporting streaming audio buffers and voice activity detection (VAD).
-- **Text-to-Speech (TTS) Strategy:**
-  1. *Primary Cloud Provider:* **Azure Speech Services** (en-IN neural female voices, e.g., `en-IN-NeerjaNeural` or `en-IN-KavyaNeural`) tuned for conversational elegance.
-  2. *Alternative Cloud Provider:* **ElevenLabs** for ultra-expressive, high-fidelity emotional nuance.
-  3. *Offline Local Fallback:* **Piper TTS** (or on-device VITS) ensuring complete voice functionality without internet access.
+- **Assistant Identity:** LOVE
+- **Vocal Style:** Hybrid Cinematic + Natural (JARVIS/FRIDAY poise combined with human warmth and cadence).
+- **Vocal Gender:** Female.
+- **Accent:** Indian English (articulate, elegant, cultured).
+- **Personality:** Intelligent, elegant, calm, confident, and proactive.
+- **Provider Strategy:**
+  - *Primary Cloud:* **Azure Speech Services** (`en-IN-NeerjaNeural` / `en-IN-KavyaNeural`).
+  - *Secondary Cloud:* **ElevenLabs** expressive neural cloning.
+  - *Offline Local:* **Piper Neural TTS** (100% on-device).
+  - *Speech-to-Text:* **`faster-whisper`** (CTranslate2 backend).
+  - *Wake-Word:* **`openWakeWord`** on-device detection for `"Hey Love"`.
+  - *Decoupling Guarantee:* Voice subsystem operates independently of the LLM core.
 
 ---
 
-## 6. Backend Subsystem Layout
+## 6. Database Strategy & Migrations
 
-```
-backend/app/
-├── api/
-│   └── v1/
-│       ├── endpoints/
-│       │   └── health.py          # Liveness, readiness, and diagnostics
-│       └── api.py                 # Aggregated v1 routing table
-├── authentication/                # JWT issuance, refresh, and device authorization
-├── automation/                    # OS automation, shell sandbox, file operations
-├── config/
-│   └── settings.py                # Pydantic Settings loaded from .env
-├── core/
-│   ├── exceptions.py              # Domain exceptions and standardized JSON handlers
-│   └── logging.py                 # Structured text and JSON logging configuration
-├── database/
-│   ├── base.py                    # SQLAlchemy DeclarativeBase and Timestamp mixins
-│   └── session.py                 # Async engine, sessionmaker, and health checks
-├── intelligence/                  # Universal Intelligence Layer (UIL)
-├── memory/                        # Episodic memory, vector storage, and profile facts
-├── productivity/                  # Tasks, schedules, reminders, and briefings
-├── security/                      # Cryptography, token verification, audit logger
-├── synchronization/               # Cross-device state sync (CRDT/E2EE)
-├── voice/                         # Wake-word detection, STT, and TTS engines
-└── main.py                        # FastAPI entry point and lifecycle manager
-```
-
----
-
-## 7. Database Strategy & Evolution
-
-### Local Development & Standalone Desktop
-- **Engine:** Asynchronous SQLite via `aiosqlite`.
-- **URL Schema:** `sqlite+aiosqlite:///./database/love.db`
-- **Characteristics:** Zero-configuration, local single-file persistence, embedded directly inside desktop bundle.
-
-### Distributed Multi-Device & Production
-- **Engine:** PostgreSQL via `asyncpg`.
-- **URL Schema:** `postgresql+asyncpg://<user>:<pwd>@<host>:<port>/<db>`
-- **Migrations:** Automated schema versioning via Alembic under `database/migrations/`.
-- **Vector Search:** `pgvector` extension for scalable high-dimensional semantic search.
-
----
-
-## 8. Security & Isolation Architecture
-
-```mermaid
-flowchart LR
-    subgraph HostMachine["Host Machine"]
-        subgraph LOVE_Boundary["LOVE Isolated Environment"]
-            EnvFile[".env Secrets"]
-            DBFile["database/love.db"]
-            Backend["FastAPI Backend :8000"]
-            SandboxedTools["Restricted Tool Runner"]
-        end
-
-        subgraph Legacy["External / Legacy Projects"]
-            KURO["KURO (Isolated)"]
-            FRIDAY["FRIDAY (Isolated)"]
-        end
-    end
-
-    Backend -.->|Strictly Forbidden| KURO
-    Backend -.->|Strictly Forbidden| FRIDAY
-    Backend --> EnvFile
-    Backend --> DBFile
-    Backend --> SandboxedTools
-```
-
-1. **Isolation from KURO and FRIDAY:**
-   - LOVE runs strictly in its own isolated workspace, virtual environment, and database schema.
-   - No cross-project code imports, shared tables, or shared state.
-2. **Environment Variable Hygiene:**
-   - Zero hardcoded keys or secrets.
-   - Pydantic Settings reads from `.env` (ignored by version control).
-3. **Execution Sandboxing:**
-   - Desktop and shell automation run within isolated subprocess wrappers requiring user confirmation gates for any irreversible operation.
-
----
-
-## 9. Multi-Platform Client Roadmap
-
-| Platform | Technology Stack | Target Packaging | Focus Area |
-| :--- | :--- | :--- | :--- |
-| **Desktop** | Tauri (Rust) + React / TS | Windows (MSI), macOS (DMG), Linux (AppImage) | System tray, global hotkeys, audio capture, OS automation |
-| **Web** | React + Vite + Tailwind CSS | Modern Browsers (SPA / PWA) | Dashboard, chat, memory inspector, admin controls |
-| **Mobile** | Flutter (Dart) | Android (APK/AAB), iOS (IPA) | On-the-go voice, push notifications, offline memory |
+- **Development & Standalone Desktop:** Asynchronous SQLite (`sqlite+aiosqlite:///./database/love.db`).
+- **Production & Distributed Server:** PostgreSQL (`postgresql+asyncpg://...`).
+- **Schema Migrations:** Managed strictly via **Alembic** (`database/migrations/`).
+  - Async-compatible migration runner using `async_engine_from_config`.
+  - Batch operations enabled (`render_as_batch=True`) to support SQLite ALTER TABLE limitations.

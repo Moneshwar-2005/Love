@@ -4,7 +4,7 @@
 
 To develop and test the LOVE backend, ensure you have:
 - **Python:** Version 3.11 or newer (`python --version`)
-- **Package Manager:** `uv` (recommended for ultra-fast installs) or standard `pip`
+- **Package Manager:** `uv` (recommended) or standard `pip`
 - **Shell:** PowerShell (Windows) or Bash/Zsh (Linux/macOS)
 
 ---
@@ -26,10 +26,6 @@ python -m venv .venv
   ```powershell
   .\.venv\Scripts\Activate.ps1
   ```
-- **Windows (CMD):**
-  ```cmd
-  .\.venv\Scripts\activate.bat
-  ```
 - **macOS / Linux:**
   ```bash
   source .venv/bin/activate
@@ -38,10 +34,6 @@ python -m venv .venv
 ### 3. Install Dependencies
 ```bash
 uv pip install -r requirements.txt
-```
-Or:
-```bash
-pip install -r requirements.txt
 ```
 
 ---
@@ -54,16 +46,41 @@ Configuration is handled dynamically via Pydantic Settings and loaded from `.env
    ```bash
    cp .env.example .env
    ```
-2. Key settings:
-   - `DEBUG`: Set to `true` for auto-reloading and Swagger docs (`/docs`).
-   - `HOST`: Set to `127.0.0.1` for local development.
-   - `PORT`: Default is `8000`.
-   - `DATABASE_URL`: Defaults to `sqlite+aiosqlite:///./database/love.db`.
-   - `LOG_LEVEL`: `DEBUG`, `INFO`, `WARNING`, `ERROR`.
+2. Key Authentication & Security Variables:
+   - `SECRET_KEY`: Cryptographic secret key for signing sessions.
+   - `JWT_SECRET_KEY`: Dedicated JWT secret (defaults to `SECRET_KEY` if empty).
+   - `ACCESS_TOKEN_EXPIRE_MINUTES`: Access token lifespan (default: `60`).
+   - `REFRESH_TOKEN_EXPIRE_DAYS`: Refresh token lifespan (default: `14`).
+   - `ALLOW_OPEN_REGISTRATION`: Defaults to `false`. When false, only the first user can register (becoming Owner).
+   - `FIRST_OWNER_SETUP_TOKEN`: Optional setup token required for initial owner registration.
+   - `LOGIN_RATE_LIMIT_MAX_ATTEMPTS`: Failed attempt threshold before lockout (default: `5`).
+   - `LOGIN_RATE_LIMIT_WINDOW_SECONDS`: Sliding window duration (default: `300`).
 
 ---
 
-## 4. Running the Application
+## 4. Database Migrations (Alembic)
+
+Database schema evolution is managed via **Alembic**:
+
+### Apply Migrations
+```powershell
+.\.venv\Scripts\alembic.exe upgrade head
+```
+
+### Generate New Migration
+When ORM models are added or modified in `backend/app/database/models/`:
+```powershell
+.\.venv\Scripts\alembic.exe revision --autogenerate -m "describe_changes"
+```
+
+### Check Current Migration Status
+```powershell
+.\.venv\Scripts\alembic.exe current
+```
+
+---
+
+## 5. Running the Application
 
 ### Option A: Using the convenience runner script
 ```bash
@@ -75,29 +92,85 @@ python scripts/run_server.py
 uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Access the application in your browser:
-- **API Status:** [http://127.0.0.1:8000](http://127.0.0.1:8000)
-- **Interactive Swagger Documentation:** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- **ReDoc API Documentation:** [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+Interactive API documentation:
+- **Swagger Documentation:** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **ReDoc Documentation:** [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
 - **Health Check Endpoint:** [http://127.0.0.1:8000/api/v1/health](http://127.0.0.1:8000/api/v1/health)
 
 ---
 
-## 5. Database Initialization & Utilities
+## 6. Authentication & Device API Usage
 
-To verify database connectivity and initialize tables:
+### A. Register First Owner
 ```bash
-python scripts/init_db.py
+curl -X POST http://127.0.0.1:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "owner@love.ai",
+    "username": "loveowner",
+    "password": "StrongPassword123!",
+    "full_name": "Assistant Owner"
+  }'
+```
+*Response returns the created user profile with `is_owner: true`.*
+
+### B. Login & Obtain Tokens
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email_or_username": "owner@love.ai",
+    "password": "StrongPassword123!",
+    "device_identifier": "win-workstation-uuid-1",
+    "device_name": "Studio Windows Rig",
+    "device_type": "windows"
+  }'
+```
+*Response returns `access_token`, `refresh_token`, and user profile.*
+
+### C. Access Protected Profile
+```bash
+curl -X GET http://127.0.0.1:8000/api/v1/auth/me \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
 ```
 
-The script will report:
-- Target database URL.
-- Schema creation status.
-- Connectivity status and round-trip query latency in milliseconds.
+### D. Rotate Refresh Token
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refresh_token": "<REFRESH_TOKEN>"
+  }'
+```
+
+### E. Register Client Device
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/devices/register \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "device_identifier": "macbook-air-m2-uuid",
+    "device_name": "Portable MacBook",
+    "device_type": "macos",
+    "client_version": "0.2.0"
+  }'
+```
+
+### F. List Registered Devices
+```bash
+curl -X GET http://127.0.0.1:8000/api/v1/devices \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+### G. Revoke Device
+```bash
+curl -X DELETE http://127.0.0.1:8000/api/v1/devices/<DEVICE_ID> \
+  -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
 
 ---
 
-## 6. Automated Testing
+## 7. Automated Testing
 
 Run the automated test suite with pytest:
 
@@ -105,25 +178,9 @@ Run the automated test suite with pytest:
 # Run all tests verbosely
 pytest -v
 
-# Run only health check tests
-pytest tests/test_health.py -v
+# Run only authentication tests
+pytest tests/test_auth_api.py tests/test_auth_security.py -v
 
-# Run with coverage report
-pytest --cov=backend tests/
+# Run only device tests
+pytest tests/test_device_api.py -v
 ```
-
-### Test Design Principles:
-- Tests run against an isolated **in-memory SQLite database** (`sqlite+aiosqlite:///:memory:`).
-- Tests do not create, modify, or delete production/development database files.
-- All async operations use `pytest-asyncio` with function-scoped event loops.
-
----
-
-## 7. Adding New Endpoints
-
-Follow these steps to add new endpoints to LOVE:
-1. Define shared schemas in `shared/schemas/<feature>.py`.
-2. Implement route logic in `backend/app/api/v1/endpoints/<feature>.py`.
-3. Register the router in `backend/app/api/v1/api.py`.
-4. Write unit and integration tests in `tests/test_<feature>.py`.
-5. Run `pytest -v` to verify zero regressions.
