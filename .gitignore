@@ -1,0 +1,88 @@
+# ==============================================================================
+# LOVE — Personal AI Assistant (.gitignore)
+# ==============================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environments
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment configurations and secrets
+.env
+.env.local
+.env.*.local
+*.secrets
+secrets/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+database/*.db
+database/*.sqlite
+database/*.sqlite3
+
+# Model checkpoints and weights (store in external storage / release buckets)
+models/*.pt
+models/*.pth
+models/*.bin
+models/*.onnx
+models/*.safetensors
+models/*.gguf
+models/checkpoints/
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+
+# Logs and runtime artifacts
+logs/
+*.log
+*.pid
+
+# Node / Web build artifacts (React + TypeScript)
+web/node_modules/
+web/dist/
+web/build/
+web/.next/
+web/.turbo/
+
+# Desktop build artifacts (Tauri / Rust)
+desktop/src-tauri/target/
+
+# Mobile build artifacts (Flutter / Dart)
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/build/
+mobile/ios/Flutter/App.framework
+mobile/ios/Flutter/Flutter.framework
+mobile/android/.gradle
+mobile/android/local.properties
+
+# OS & Editor generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Archived experiments (segregated legacy data)
+archive/
