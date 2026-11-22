@@ -238,3 +238,74 @@ def test_logout_session_revocation(client: TestClient):
     # Attempting to refresh with revoked token must fail
     refresh_resp = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
     assert refresh_resp.status_code == 401
+
+
+def test_httponly_cookie_refresh_and_logout(client: TestClient):
+    """Verify that browser clients can use HttpOnly cookies for refresh without sending body token."""
+    register_owner(client)
+    login_resp = client.post(
+        "/api/v1/auth/login",
+        json={"email_or_username": "owner@love.ai", "password": "OwnerSecretPass123!"}
+    )
+    assert login_resp.status_code == 200
+    assert "love_refresh_token" in login_resp.cookies
+    cookie_token = login_resp.cookies["love_refresh_token"]
+    assert cookie_token
+
+    # Refresh via cookie with empty body
+    refresh_resp = client.post("/api/v1/auth/refresh", json={})
+    assert refresh_resp.status_code == 200
+    new_data = refresh_resp.json()
+    assert "access_token" in new_data
+    assert "love_refresh_token" in refresh_resp.cookies
+    rotated_cookie = refresh_resp.cookies["love_refresh_token"]
+    assert rotated_cookie != cookie_token
+
+    # Logout clears the cookie
+    logout_resp = client.post(
+        "/api/v1/auth/logout",
+        headers={"Authorization": f"Bearer {new_data['access_token']}"},
+        json={}
+    )
+    assert logout_resp.status_code == 200
+
+
+def test_login_input_normalization_whitespace_trimmed(client: TestClient):
+    """Verify that leading and trailing whitespace on username or email is trimmed."""
+    register_owner(client)
+    # Login with whitespace around email
+    resp1 = client.post(
+        "/api/v1/auth/login",
+        json={"email_or_username": "   owner@love.ai   ", "password": "OwnerSecretPass123!"}
+    )
+    assert resp1.status_code == 200
+    assert resp1.json()["user"]["username"] == "loveowner"
+
+    # Login with whitespace around username
+    resp2 = client.post(
+        "/api/v1/auth/login",
+        json={"email_or_username": "   loveowner   ", "password": "OwnerSecretPass123!"}
+    )
+    assert resp2.status_code == 200
+    assert resp2.json()["user"]["username"] == "loveowner"
+
+
+def test_validation_error_format_clean_message(client: TestClient):
+    """Verify that validation errors return clean human-readable error messages."""
+    resp = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "not-an-email",
+            "username": "ab",  # Too short (min 3)
+            "password": "short"  # Too short (min 8)
+        }
+    )
+    assert resp.status_code == 422
+    data = resp.json()
+    assert "error" in data
+    assert "code" in data["error"]
+    assert "message" in data["error"]
+    assert isinstance(data["error"]["message"], str)
+    assert not data["error"]["message"].startswith("[")
+    assert not data["error"]["message"].startswith("{")
+

@@ -1,0 +1,29 @@
+# Native AI Git Ignore
+# Raw and processed datasets
+datasets/raw/*
+!datasets/raw/.gitkeep
+datasets/processed/*
+!datasets/processed/.gitkeep
+datasets/manifests/*
+!datasets/manifests/.gitkeep
+
+# Checkpoints and model weights
+checkpoints/*
+!checkpoints/.gitkeep
+*.pt
+*.pth
+*.bin
+*.safetensors
+
+# Experiment runs and artifacts
+experiments/*
+!experiments/.gitkeep
+
+# Virtual environment and caches
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/

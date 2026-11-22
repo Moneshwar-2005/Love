@@ -1,0 +1,33 @@
+{
+  "tokenizer_version": "1.0.0",
+  "created_at_utc": "2026-11-21T13:30:29Z",
+  "random_seed": 42,
+  "algorithm": "byte-level-bpe",
+  "vocab_size": 8192,
+  "target_vocab_size": 8192,
+  "num_merges": 7928,
+  "special_tokens": {
+    "<pad>": 0,
+    "<unk>": 1,
+    "<bos>": 2,
+    "<eos>": 3,
+    "<|system|>": 4,
+    "<|user|>": 5,
+    "<|assistant|>": 6,
+    "<|tool|>": 7
+  },
+  "training_corpus": {
+    "path": "seed_corpus.txt",
+    "size_bytes": 2001924,
+    "sha256": "5bace1826b1414a6d0b08fa08c853911a187c6eda999e69a34cfdb57d38d9b12"
+  },
+  "artifacts_checksums": {
+    "vocab_sha256": "5d0e074fc6b39e75743da7c5a10d30938439a8806f98f2361490a5416469dd55",
+    "merges_sha256": "12e7ba2415f205d10c4b67470e1ccab4d76ea1b5dac17124bd9ecaa44b1bf8f1",
+    "tokenizer_json_sha256": "4ee54954754b6a9c18e6522a114c5271ca99d69dc12a22585abec1a7a672abdc"
+  },
+  "environment": {
+    "python_version": "3.11.16 (main, Sep  1 2026, 14:15:24) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "win32"
+  }
+}

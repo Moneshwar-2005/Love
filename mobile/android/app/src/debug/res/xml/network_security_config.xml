@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    LOVE Development Network Security Configuration (Debug Builds Only).
+    Enforces strict TLS verification against system CAs plus the local development CA (@raw/love_dev_ca).
+    Debug overrides are strictly stripped and ignored by Android OS in release builds.
+    Cleartext HTTP traffic remains prohibited.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Debug overrides: active ONLY when android:debuggable="true" -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/love_dev_ca" />
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>

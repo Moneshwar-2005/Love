@@ -1,0 +1,34 @@
+# LOVE Native AI Architecture Configuration: Small Experimental
+# Target Parameters: ~31.5 Million (Do not train during NAI-01)
+model_name: "love-native-small"
+architecture: "decoder-only-transformer"
+
+# Vocabulary & Context
+vocab_size: 8192
+context_length: 512
+
+# Transformer Dimensions
+layers: 8
+heads: 8
+hidden_dim: 512
+head_dim: 64            # hidden_dim // heads
+ffn_dim: 1536           # 3 * hidden_dim for SwiGLU
+
+# Architectural Components
+positional_encoding: "rope"
+normalization: "rmsnorm"
+norm_eps: 1.0e-5
+attention: "causal_self_attention"
+ffn_activation: "swiglu"
+rope_base: 10000.0
+tie_embeddings: true
+dropout: 0.0
+
+# Initialization
+init_method: "normal"
+init_std: 0.02
+
+# Training Default Targets
+precision: "float32"
+micro_batch_size: 1
+max_grad_norm: 1.0

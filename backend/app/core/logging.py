@@ -64,3 +64,6 @@ def get_logger(name: str) -> logging.Logger:
     Convenience helper to retrieve a named logger under the LOVE namespace.
     """
     return logging.getLogger(f"love.{name}")
+
+
+logger = get_logger("app")

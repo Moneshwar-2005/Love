@@ -24,13 +24,21 @@ venv.bak/
 *.secrets
 secrets/
 
-# Database files
+# Database files, journals and local vector dumps
 *.db
 *.sqlite
 *.sqlite3
+*.db-shm
+*.db-wal
+*.db-journal
 database/*.db
 database/*.sqlite
 database/*.sqlite3
+database/*.db-shm
+database/*.db-wal
+database/*.db-journal
+database/vectors/
+database/backups/
 
 # Model checkpoints and weights (store in external storage / release buckets)
 models/*.pt
@@ -54,26 +62,58 @@ coverage.xml
 logs/
 *.log
 *.pid
+*.tmp
+love_*.txt
 
-# Node / Web build artifacts (React + TypeScript)
+# Node / Dependency directories across all subprojects
+node_modules/
+**/node_modules/
 web/node_modules/
+desktop/node_modules/
+mobile/node_modules/
+
+# Build artifacts across all subprojects
+dist/
+**/dist/
+build/
+**/build/
 web/dist/
 web/build/
 web/.next/
 web/.turbo/
-
-# Desktop build artifacts (Tauri / Rust)
+desktop/dist/
 desktop/src-tauri/target/
+mobile/dist/
+mobile/build/
 
-# Mobile build artifacts (Flutter / Dart)
+# Mobile / Capacitor / Flutter build artifacts
 mobile/.dart_tool/
 mobile/.flutter-plugins
 mobile/.flutter-plugins-dependencies
-mobile/build/
 mobile/ios/Flutter/App.framework
 mobile/ios/Flutter/Flutter.framework
-mobile/android/.gradle
+mobile/android/.gradle/
 mobile/android/local.properties
+mobile/android/app/build/
+mobile/android/build/
+mobile/android/capacitor-cordova-android-plugins/build/
+**/.gradle/
+
+# Screenshots & test run captures
+love_*.png
+desktop/*.png
+desktop/*_log.txt
+desktop/capture_log.txt
+desktop/dashboard_screenshot.png
+desktop/dashboard_verification_log.txt
+desktop/desktop_screenshot.png
+desktop/out_test.txt
+desktop/verification_log.txt
+desktop/sync_screenshot.png
+desktop/sync_verification_log.txt
+mobile/*.png
+mobile/screenshots/
+web/screenshots/
 
 # OS & Editor generated files
 .DS_Store

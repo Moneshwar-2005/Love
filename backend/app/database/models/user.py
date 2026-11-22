@@ -11,8 +11,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from backend.app.database.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
+    from backend.app.database.models.conversation import Conversation, Message
     from backend.app.database.models.device import Device
+    from backend.app.database.models.memory import Memory, MemoryAuditLog, MemorySuggestion
     from backend.app.database.models.session import RefreshTokenSession
+    from backend.app.database.models.task import Task
 
 
 def generate_uuid() -> str:
@@ -86,6 +89,35 @@ class User(Base, TimestampMixin):
         back_populates="user",
         cascade="all, delete-orphan",
         order_by="desc(RefreshTokenSession.created_at)"
+    )
+    conversations: Mapped[List["Conversation"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="desc(Conversation.updated_at)"
+    )
+    messages: Mapped[List["Message"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    memories: Mapped[List["Memory"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="desc(Memory.updated_at)"
+    )
+    memory_audits: Mapped[List["MemoryAuditLog"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="desc(MemoryAuditLog.created_at)"
+    )
+    memory_suggestions: Mapped[List["MemorySuggestion"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="desc(MemorySuggestion.created_at)"
+    )
+    tasks: Mapped[List["Task"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="desc(Task.created_at)"
     )
 
     def __repr__(self) -> str:

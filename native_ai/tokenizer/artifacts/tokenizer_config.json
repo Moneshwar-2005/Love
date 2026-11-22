@@ -1,0 +1,24 @@
+{
+  "tokenizer_name": "love-native-bpe-8k",
+  "algorithm": "byte-level-bpe",
+  "vocab_size": 8192,
+  "context_length": 512,
+  "pad_token": "<pad>",
+  "unk_token": "<unk>",
+  "bos_token": "<bos>",
+  "eos_token": "<eos>",
+  "system_token": "<|system|>",
+  "user_token": "<|user|>",
+  "assistant_token": "<|assistant|>",
+  "tool_token": "<|tool|>",
+  "special_tokens": [
+    "<pad>",
+    "<unk>",
+    "<bos>",
+    "<eos>",
+    "<|system|>",
+    "<|user|>",
+    "<|assistant|>",
+    "<|tool|>"
+  ]
+}

@@ -4,6 +4,7 @@ Core application exceptions and HTTP error handling for LOVE.
 
 from typing import Any, Dict, Optional
 from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from backend.app.core.logging import get_logger
@@ -63,6 +64,45 @@ def register_exception_handlers(app: FastAPI) -> None:
     """
     Registers standardized exception handlers on the FastAPI application instance.
     """
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+        errors = exc.errors()
+        first_err = errors[0] if errors else {}
+        loc = [str(x) for x in first_err.get("loc", [])]
+        err_type = str(first_err.get("type", ""))
+
+        if any("username" in l.lower() for l in loc):
+            if "pattern" in err_type:
+                user_msg = "Please enter a valid username (alphanumeric, underscores, and hyphens only)."
+            elif "too_short" in err_type:
+                user_msg = "Username must be at least 3 characters."
+            else:
+                user_msg = "Please enter a valid username."
+        elif any("email" in l.lower() for l in loc):
+            user_msg = "Please enter a valid email address."
+        elif any("password" in l.lower() for l in loc):
+            if "too_short" in err_type:
+                user_msg = "Password must be at least 8 characters."
+            else:
+                user_msg = "Please enter a valid password."
+        else:
+            user_msg = "Please complete the required fields with valid values."
+
+        logger.warning(
+            f"Validation error on {request.method} {request.url.path}: {user_msg} (type={err_type}, loc={loc})"
+        )
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "error": {
+                    "code": "ValidationError",
+                    "message": user_msg,
+                    "details": {"field": loc[-1] if loc else "field", "type": err_type},
+                    "path": request.url.path,
+                }
+            }
+        )
 
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:

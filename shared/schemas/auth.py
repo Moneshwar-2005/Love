@@ -3,8 +3,8 @@ Pydantic schemas for authentication and user identity requests and responses.
 """
 
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from typing import Any, Optional
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from shared.constants import DeviceType
 
@@ -17,15 +17,42 @@ class UserRegisterRequest(BaseModel):
     full_name: Optional[str] = Field(None, max_length=100, description="Display name")
     setup_token: Optional[str] = Field(None, description="Initial owner setup token if configured")
 
+    @field_validator("username", mode="before")
+    @classmethod
+    def normalize_username(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                raise ValueError("Username cannot be empty.")
+        return v
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                raise ValueError("Email cannot be empty.")
+        return v
+
 
 class UserLoginRequest(BaseModel):
     """Payload for user authentication."""
-    email_or_username: str = Field(..., min_length=3, max_length=255, description="Email address or username")
+    email_or_username: str = Field(..., min_length=1, max_length=255, description="Email address or username")
     password: str = Field(..., min_length=1, max_length=128, description="User password")
     device_identifier: Optional[str] = Field(None, max_length=128, description="Client hardware/installation identifier")
     device_name: Optional[str] = Field(None, max_length=100, description="Friendly client device name")
     device_type: Optional[DeviceType] = Field(None, description="Platform type")
     client_version: Optional[str] = Field(None, max_length=50, description="Client app version")
+
+    @field_validator("email_or_username", mode="before")
+    @classmethod
+    def normalize_email_or_username(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                raise ValueError("Username or email cannot be empty.")
+        return v
 
 
 class UserResponse(BaseModel):
@@ -53,7 +80,7 @@ class TokenResponse(BaseModel):
 
 class TokenRefreshRequest(BaseModel):
     """Payload for token renewal."""
-    refresh_token: str = Field(..., description="Valid JWT refresh token")
+    refresh_token: Optional[str] = Field(None, description="Valid JWT refresh token (or provided via HttpOnly cookie)")
 
 
 class TokenRefreshResponse(BaseModel):

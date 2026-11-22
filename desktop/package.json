@@ -1,0 +1,51 @@
+{
+  "name": "love-desktop",
+  "version": "1.0.0",
+  "description": "LOVE Personal AI Assistant Desktop Client",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "electron": "electron electron/main.cjs",
+    "electron:dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && electron electron/main.cjs\"",
+    "verify:runtime": "cross-env ELECTRON_RUN_AS_NODE= electron scripts/verify_electron_runtime.cjs",
+    "capture:sync": "cross-env ELECTRON_RUN_AS_NODE= electron scripts/capture_sync_view.cjs"
+  },
+  "keywords": [
+    "ai",
+    "assistant",
+    "love",
+    "desktop",
+    "electron",
+    "react"
+  ],
+  "author": "LOVE Assistant",
+  "license": "MIT",
+  "dependencies": {
+    "lucide-react": "^1.76.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^8.0.0",
+    "@testing-library/react": "^16.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "autoprefixer": "^10.7.0",
+    "concurrently": "^10.0.7",
+    "cross-env": "^10.1.0",
+    "electron": "^45.4.1",
+    "jsdom": "^31.0.1",
+    "postcss": "^8.5.33",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1",
+    "wait-on": "^9.5.1"
+  }
+}

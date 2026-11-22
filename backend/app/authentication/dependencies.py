@@ -123,3 +123,20 @@ async def get_current_owner(
             detail="Administrative owner access required."
         )
     return user
+
+
+async def get_current_device_id(
+    token: Optional[str] = Depends(oauth2_scheme)
+) -> Optional[str]:
+    """
+    Extracts client device_id from JWT token payload claims if present.
+    Returns None if token is omitted or does not specify a device.
+    """
+    if not token:
+        return None
+    try:
+        payload = decode_token(token, expected_type=TokenType.ACCESS)
+        return payload.get("device_id")
+    except Exception:
+        return None
+

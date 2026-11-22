@@ -73,6 +73,13 @@ async def list_devices_endpoint(
     summary="Revoke Device",
     description="Revokes device authorization and terminates all active refresh token sessions originating from that device."
 )
+@router.post(
+    "/{device_id}/revoke",
+    response_model=DeviceResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Revoke Device (Alias)",
+    description="Revokes device authorization and terminates all active refresh token sessions originating from that device."
+)
 async def revoke_device_endpoint(
     device_id: str,
     current_user: User = Depends(get_current_active_user),

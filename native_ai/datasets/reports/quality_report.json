@@ -1,0 +1,94 @@
+{
+  "pipeline_version": "1.0.0",
+  "timestamp_utc": "2026-11-21T13:45:07Z",
+  "processing_time_seconds": 0.144,
+  "documents": {
+    "raw_ingested": 103,
+    "cleaning_rejected": 0,
+    "privacy_rejected": 1,
+    "exact_duplicates_rejected": 38,
+    "normalized_duplicates_rejected": 0,
+    "near_duplicates_rejected": 42,
+    "total_duplicates_removed": 80,
+    "final_admitted": 22,
+    "retention_rate_pct": 21.36
+  },
+  "bytes": {
+    "raw_bytes": 71454,
+    "cleaned_bytes": 14630,
+    "compression_or_cleaning_delta_bytes": 56824
+  },
+  "words": {
+    "total_cleaned_words": 2137,
+    "avg_words_per_document": 97.14
+  },
+  "category_distribution": {
+    "counts": {
+      "general_english": 10,
+      "reasoning_math": 4,
+      "instruction_dialog": 3,
+      "technical_code": 3,
+      "structured_tasks": 2
+    },
+    "percentages": {
+      "general_english": 45.45,
+      "reasoning_math": 18.18,
+      "instruction_dialog": 13.64,
+      "technical_code": 13.64,
+      "structured_tasks": 9.09
+    },
+    "target_proportions": {
+      "general_english": 35.0,
+      "reasoning_math": 20.0,
+      "instruction_dialog": 20.0,
+      "technical_code": 15.0,
+      "structured_tasks": 10.0
+    }
+  },
+  "splits": {
+    "train": {
+      "split_name": "train",
+      "file_path": "F:\\LOVE\\native_ai\\datasets\\splits\\train\\train.jsonl",
+      "num_documents": 20,
+      "num_words": 1951,
+      "file_bytes": 17545,
+      "sha256": "61c1cdbffcdb562c498f4890ba36915692240f05a676e54e0f97ba81fd34a620",
+      "category_counts": {
+        "structured_tasks": 1,
+        "general_english": 9,
+        "instruction_dialog": 3,
+        "reasoning_math": 4,
+        "technical_code": 3
+      },
+      "random_seed": 42
+    },
+    "validation": {
+      "split_name": "val",
+      "file_path": "F:\\LOVE\\native_ai\\datasets\\splits\\validation\\val.jsonl",
+      "num_documents": 1,
+      "num_words": 96,
+      "file_bytes": 908,
+      "sha256": "b9d4787b48d0286b5df3a94141c478158a6aa96f1c69b8e879d3d38c36782103",
+      "category_counts": {
+        "general_english": 1
+      },
+      "random_seed": 42
+    },
+    "test": {
+      "split_name": "test",
+      "file_path": "F:\\LOVE\\native_ai\\datasets\\splits\\test\\test.jsonl",
+      "num_documents": 1,
+      "num_words": 90,
+      "file_bytes": 984,
+      "sha256": "fc622dd9543bf98ca9e4d85638d93dd039ecc5994a5a1dcd0034980c57cc26e2",
+      "category_counts": {
+        "structured_tasks": 1
+      },
+      "random_seed": 42
+    }
+  },
+  "filter_rejection_reasons": {
+    "rejected_secret_or_confidential_-----BEGIN [A-Z ]*PRIVATE KEY-": 1
+  },
+  "privacy_redactions_applied": 2
+}
