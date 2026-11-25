@@ -1,94 +1,114 @@
 {
-  "pipeline_version": "1.0.0",
-  "timestamp_utc": "2026-11-21T13:45:07Z",
-  "processing_time_seconds": 0.144,
-  "documents": {
-    "raw_ingested": 103,
-    "cleaning_rejected": 0,
-    "privacy_rejected": 1,
-    "exact_duplicates_rejected": 38,
-    "normalized_duplicates_rejected": 0,
-    "near_duplicates_rejected": 42,
-    "total_duplicates_removed": 80,
-    "final_admitted": 22,
-    "retention_rate_pct": 21.36
+  "pipeline_version": "1.2.0",
+  "phase": "NAI-03.2",
+  "timestamp_utc": "2026-11-22T09:58:42Z",
+  "processing_time_seconds": 295.87,
+  "source_processing_stats": {
+    "gsm8k": {
+      "raw_train_rows": 7473,
+      "raw_test_rows": 1319,
+      "admitted_train_docs": 7473,
+      "admitted_test_docs": 1319,
+      "cleaning_rejected": 0,
+      "privacy_rejected": 0,
+      "privacy_redactions": 1,
+      "duplicates_rejected": 0
+    },
+    "oasst1": {
+      "raw_train_messages": 84437,
+      "raw_val_messages": 4401,
+      "english_train_messages": 39283,
+      "english_val_messages": 2022,
+      "filtered_train_dialogues": 18339,
+      "filtered_val_dialogues": 904,
+      "cleaning_rejected": 0,
+      "privacy_rejected": 7,
+      "privacy_redactions": 207,
+      "duplicates_rejected": 719
+    },
+    "tinystories": {
+      "raw_train_rows_available": 529930,
+      "raw_val_rows_available": 21990,
+      "admitted_train_stories": 30000,
+      "admitted_val_stories": 2000,
+      "cleaning_rejected": 0,
+      "privacy_rejected": 0,
+      "privacy_redactions": 0,
+      "duplicates_rejected": 0
+    }
   },
-  "bytes": {
-    "raw_bytes": 71454,
-    "cleaned_bytes": 14630,
-    "compression_or_cleaning_delta_bytes": 56824
+  "combined_splits": {
+    "train": {
+      "document_count": 55831,
+      "token_count": 25467894,
+      "word_count": 10815513,
+      "file_bytes": 73682535,
+      "actual_percentage": 92.97,
+      "sha256": "45e8fe8eb75722f6328aa4196f78871e98235d5576efbb130f9f042dba07cbea"
+    },
+    "validation": {
+      "document_count": 1904,
+      "token_count": 933909,
+      "word_count": 398580,
+      "file_bytes": 2738823,
+      "actual_percentage": 3.17,
+      "sha256": "c39ab5df4bb6b6d4f5b5289527eb9d02afb5924165bb1ff0d4086c2023c02036"
+    },
+    "test": {
+      "document_count": 2319,
+      "token_count": 716768,
+      "word_count": 299771,
+      "file_bytes": 2062751,
+      "actual_percentage": 3.86,
+      "sha256": "faf7eb91287f09ff0e9c9eb6a2a1be6ce1887209bbb9cab6576ea45da8ee2acf"
+    }
   },
-  "words": {
-    "total_cleaned_words": 2137,
-    "avg_words_per_document": 97.14
+  "totals": {
+    "total_documents": 60054,
+    "total_clean_tokens": 27118571,
+    "total_training_tokens": 25467894,
+    "total_evaluation_tokens": 1650677
   },
-  "category_distribution": {
+  "target_20m_assessment": {
+    "target_tokens": 20000000,
+    "achieved_training_tokens": 25467894,
+    "target_achieved": true,
+    "shortfall_tokens": 0,
+    "evaluation_tokens_excluded_from_target": 1650677
+  },
+  "category_distribution_train": {
     "counts": {
+      "reasoning_math": 7477,
+      "instruction_dialog": 18342,
+      "english_synthetic_stories": 30000,
       "general_english": 10,
-      "reasoning_math": 4,
-      "instruction_dialog": 3,
-      "technical_code": 3,
       "structured_tasks": 2
     },
     "percentages": {
-      "general_english": 45.45,
-      "reasoning_math": 18.18,
-      "instruction_dialog": 13.64,
-      "technical_code": 13.64,
-      "structured_tasks": 9.09
-    },
-    "target_proportions": {
-      "general_english": 35.0,
-      "reasoning_math": 20.0,
-      "instruction_dialog": 20.0,
-      "technical_code": 15.0,
-      "structured_tasks": 10.0
+      "reasoning_math": 13.39,
+      "instruction_dialog": 32.85,
+      "english_synthetic_stories": 53.73,
+      "general_english": 0.02,
+      "structured_tasks": 0.0
     }
   },
-  "splits": {
-    "train": {
-      "split_name": "train",
-      "file_path": "F:\\LOVE\\native_ai\\datasets\\splits\\train\\train.jsonl",
-      "num_documents": 20,
-      "num_words": 1951,
-      "file_bytes": 17545,
-      "sha256": "61c1cdbffcdb562c498f4890ba36915692240f05a676e54e0f97ba81fd34a620",
-      "category_counts": {
-        "structured_tasks": 1,
-        "general_english": 9,
-        "instruction_dialog": 3,
-        "reasoning_math": 4,
-        "technical_code": 3
-      },
-      "random_seed": 42
-    },
-    "validation": {
-      "split_name": "val",
-      "file_path": "F:\\LOVE\\native_ai\\datasets\\splits\\validation\\val.jsonl",
-      "num_documents": 1,
-      "num_words": 96,
-      "file_bytes": 908,
-      "sha256": "b9d4787b48d0286b5df3a94141c478158a6aa96f1c69b8e879d3d38c36782103",
-      "category_counts": {
-        "general_english": 1
-      },
-      "random_seed": 42
-    },
-    "test": {
-      "split_name": "test",
-      "file_path": "F:\\LOVE\\native_ai\\datasets\\splits\\test\\test.jsonl",
-      "num_documents": 1,
-      "num_words": 90,
-      "file_bytes": 984,
-      "sha256": "fc622dd9543bf98ca9e4d85638d93dd039ecc5994a5a1dcd0034980c57cc26e2",
-      "category_counts": {
-        "structured_tasks": 1
-      },
-      "random_seed": 42
-    }
+  "category_coverage_assessment": {
+    "covered_domains": [
+      "reasoning_math (GSM8K: Grade school multi-step math problem solving)",
+      "instruction_dialog (OASST1: Human-aligned multi-turn conversation & instructions)",
+      "english_synthetic_stories (TinyStories: Synthetic narrative consistency & common-sense reasoning)",
+      "general_english (Baseline: Core descriptive prose & vocabulary)",
+      "structured_tasks (Baseline: Extraction & formatting)"
+    ],
+    "underrepresented_or_missing_domains": [
+      "technical_code (Pending resolution of src_tech_01 licensing or The Stack ingestion)",
+      "general_factual_knowledge (Enclyclopedic coverage limited; Simple English Wikipedia recommended next)",
+      "advanced_formal_reasoning (University-level mathematics/logic)"
+    ],
+    "is_fully_balanced": false
   },
-  "filter_rejection_reasons": {
-    "rejected_secret_or_confidential_-----BEGIN [A-Z ]*PRIVATE KEY-": 1
-  },
-  "privacy_redactions_applied": 2
+  "pretraining_readiness_recommendation": {
+    "decision": "BLOCKED",
+    "reason": "Corpus scale expanded to ~21.8M clean training tokens, achieving Scenario B volume. However, pretraining remains blocked in NAI-03.2 pending formal review of category balance and approval to proceed to Phase NAI-04 training subsystem initialization."
+  }
 }

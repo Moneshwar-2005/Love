@@ -1,0 +1,99 @@
+{
+  "format_version": "1.0.0",
+  "created_at_iso": "2026-11-24T12:45:00Z",
+  "seed": 42,
+  "pipeline_stats": {
+    "total_candidates": 17021,
+    "structural_rejected": 1,
+    "duplicate_rejected": 3,
+    "privacy_rejected": 8,
+    "oversized_rejected": 3293,
+    "admitted_clean_examples": 13716
+  },
+  "source_licenses": {
+    "OpenAssistant/oasst1": "Apache-2.0",
+    "openai/gsm8k": "MIT",
+    "LOVE Curated Seed Corpus": "CC0-1.0"
+  },
+  "special_tokens": {
+    "<pad>": 0,
+    "<unk>": 1,
+    "<bos>": 2,
+    "<eos>": 3,
+    "<|system|>": 4,
+    "<|user|>": 5,
+    "<|assistant|>": 6,
+    "<|tool|>": 7
+  },
+  "splits": {
+    "train": {
+      "file_name": "sft_train.jsonl",
+      "sha256": "bf11ca1db109d5a608729e4c0c083280633b8fc03e286274b54bffefab004d54",
+      "file_size_bytes": 18191983,
+      "example_count": 11639,
+      "tree_count": 8545,
+      "prompt_tokens_masked": 1385387,
+      "target_tokens_supervised": 2297475,
+      "total_tokens_emitted": 3682862,
+      "category_distribution": {
+        "general_conversation": 4279,
+        "instruction_following": 799,
+        "reasoning_mathematics": 6099,
+        "safe_refusal": 259,
+        "structured_output": 68,
+        "writing_summarization": 135
+      },
+      "turn_depth_distribution": {
+        "1_turns": 7431,
+        "2_turns": 4026,
+        "3_turns": 182
+      }
+    },
+    "validation": {
+      "file_name": "sft_val.jsonl",
+      "sha256": "a08ee39e28555fb54a8948bd12a2abbb26dede71b776709ef52bb685e95dba99",
+      "file_size_bytes": 2126905,
+      "example_count": 1387,
+      "tree_count": 1005,
+      "prompt_tokens_masked": 163364,
+      "target_tokens_supervised": 274979,
+      "total_tokens_emitted": 438343,
+      "category_distribution": {
+        "general_conversation": 554,
+        "instruction_following": 86,
+        "reasoning_mathematics": 696,
+        "safe_refusal": 32,
+        "structured_output": 14,
+        "writing_summarization": 5
+      },
+      "turn_depth_distribution": {
+        "1_turns": 887,
+        "2_turns": 481,
+        "3_turns": 19
+      }
+    },
+    "test": {
+      "file_name": "sft_test.jsonl",
+      "sha256": "e2cfd6b10c6151d15a167227ca3d17d95a28d669689017ddd97694d397b89a87",
+      "file_size_bytes": 1097037,
+      "example_count": 690,
+      "tree_count": 503,
+      "prompt_tokens_masked": 80081,
+      "target_tokens_supervised": 140507,
+      "total_tokens_emitted": 220588,
+      "category_distribution": {
+        "general_conversation": 245,
+        "instruction_following": 48,
+        "reasoning_mathematics": 356,
+        "safe_refusal": 29,
+        "structured_output": 4,
+        "writing_summarization": 8
+      },
+      "turn_depth_distribution": {
+        "1_turns": 431,
+        "2_turns": 245,
+        "3_turns": 14
+      }
+    }
+  }
+}

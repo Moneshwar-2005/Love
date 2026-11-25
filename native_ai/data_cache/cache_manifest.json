@@ -1,0 +1,123 @@
+{
+  "manifest_version": "1.0.0",
+  "phase": "NAI-04",
+  "created_at_utc": "2026-11-22T10:43:21Z",
+  "build_duration_seconds": 55.35,
+  "vocab_size": 8192,
+  "token_dtype": "uint16",
+  "category_mapping": {
+    "english_synthetic_stories": 0,
+    "instruction_dialog": 1,
+    "reasoning_math": 2,
+    "general_english": 3,
+    "structured_tasks": 4,
+    "technical_code": 5
+  },
+  "source_checksums": {
+    "train": {
+      "path": "F:\\LOVE\\native_ai\\datasets\\splits\\train\\train.jsonl",
+      "bytes": 73682535,
+      "sha256": "45e8fe8eb75722f6328aa4196f78871e98235d5576efbb130f9f042dba07cbea"
+    },
+    "validation": {
+      "path": "F:\\LOVE\\native_ai\\datasets\\splits\\validation\\val.jsonl",
+      "bytes": 2738823,
+      "sha256": "c39ab5df4bb6b6d4f5b5289527eb9d02afb5924165bb1ff0d4086c2023c02036"
+    },
+    "test": {
+      "path": "F:\\LOVE\\native_ai\\datasets\\splits\\test\\test.jsonl",
+      "bytes": 2062751,
+      "sha256": "faf7eb91287f09ff0e9c9eb6a2a1be6ce1887209bbb9cab6576ea45da8ee2acf"
+    }
+  },
+  "tokenizer_checksums": {
+    "vocab.json": "5d0e074fc6b39e75743da7c5a10d30938439a8806f98f2361490a5416469dd55",
+    "merges.txt": "12e7ba2415f205d10c4b67470e1ccab4d76ea1b5dac17124bd9ecaa44b1bf8f1",
+    "tokenizer.json": "4ee54954754b6a9c18e6522a114c5271ca99d69dc12a22585abec1a7a672abdc"
+  },
+  "splits": {
+    "train": {
+      "split": "train",
+      "total_tokens": 25467894,
+      "total_documents": 55831,
+      "bin_bytes": 50935788,
+      "bin_sha256": "6af53375b33e2045554d9608dd0462e03e0cb5c25a4b5a091733bc81049b0d74",
+      "offsets_bytes": 670100,
+      "offsets_sha256": "63293f9a420371a09cbacd90253832de7ec7fe5351ac75e87a25534ae8d5050f",
+      "category_counts": {
+        "english_synthetic_stories": 30000,
+        "instruction_dialog": 18342,
+        "reasoning_math": 7477,
+        "general_english": 10,
+        "structured_tasks": 2,
+        "technical_code": 0
+      },
+      "category_tokens": {
+        "english_synthetic_stories": 11917089,
+        "instruction_dialog": 11501502,
+        "reasoning_math": 2046500,
+        "general_english": 2128,
+        "structured_tasks": 675,
+        "technical_code": 0
+      }
+    },
+    "validation": {
+      "split": "validation",
+      "total_tokens": 933909,
+      "total_documents": 1904,
+      "bin_bytes": 1867818,
+      "bin_sha256": "e72d0e6103f274fd7d39933b7f6d18c61122695cc1b2a7fbe92d2c5cb3cd8fd6",
+      "offsets_bytes": 22976,
+      "offsets_sha256": "8422e28d336b31c220e560be300017b44f8250f52d6a494b3afb3c6c7f1af019",
+      "category_counts": {
+        "english_synthetic_stories": 1000,
+        "instruction_dialog": 904,
+        "reasoning_math": 0,
+        "general_english": 0,
+        "structured_tasks": 0,
+        "technical_code": 0
+      },
+      "category_tokens": {
+        "english_synthetic_stories": 348997,
+        "instruction_dialog": 584912,
+        "reasoning_math": 0,
+        "general_english": 0,
+        "structured_tasks": 0,
+        "technical_code": 0
+      }
+    },
+    "test": {
+      "split": "test",
+      "total_tokens": 716768,
+      "total_documents": 2319,
+      "bin_bytes": 1433536,
+      "bin_sha256": "d98f88ed695703d99766ad7441e01fc906f803f62cb7e63da776fcbe4be8168c",
+      "offsets_bytes": 27956,
+      "offsets_sha256": "dbf31fed7f6552ee958eadcb1919e59ec8fb347c8e1cb86aea3a59f31269c7dc",
+      "category_counts": {
+        "english_synthetic_stories": 1000,
+        "instruction_dialog": 0,
+        "reasoning_math": 1319,
+        "general_english": 0,
+        "structured_tasks": 0,
+        "technical_code": 0
+      },
+      "category_tokens": {
+        "english_synthetic_stories": 348792,
+        "instruction_dialog": 0,
+        "reasoning_math": 367976,
+        "general_english": 0,
+        "structured_tasks": 0,
+        "technical_code": 0
+      }
+    }
+  },
+  "totals": {
+    "total_tokens_cached": 27118571,
+    "training_tokens": 25467894,
+    "validation_tokens": 933909,
+    "test_tokens": 716768,
+    "total_cache_bytes": 54958174
+  },
+  "status": "VALIDATED"
+}

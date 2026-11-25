@@ -1,0 +1,42 @@
+# LOVE Native AI — SFT Configuration: love-native-tiny (NAI-07A)
+# Supervised Fine-Tuning Specification
+
+model_name: "love-native-tiny"
+architecture: "decoder-only-transformer"
+
+# Vocabulary & Context
+vocab_size: 8192
+context_length: 512
+
+# Transformer Dimensions
+layers: 4
+heads: 4
+hidden_dim: 256
+head_dim: 64
+ffn_dim: 768
+
+# Architectural Components
+positional_encoding: "rope"
+normalization: "rmsnorm"
+norm_eps: 1.0e-5
+attention: "causal_self_attention"
+ffn_activation: "swiglu"
+rope_base: 10000.0
+tie_embeddings: true
+dropout: 0.0
+
+# Supervised Fine-Tuning Hyperparameters
+sft_config:
+  learning_rate: 5.0e-5
+  min_learning_rate: 5.0e-6
+  warmup_steps: 20
+  max_steps: 500
+  batch_size: 2
+  gradient_accumulation_steps: 4
+  precision: "float32"
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+  target_mask_loss_only: true
+  pad_token_id: 0
+  ignore_index: -100
+  seed: 42

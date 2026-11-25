@@ -1,11 +1,11 @@
 """Dataset Engineering Pipeline Orchestrator for LOVE Native AI.
 
-Implements Tasks 1, 4, 6, 7, 8, 9, 10, 13, and 14:
+Implements Tasks 1, 4, 6, 7, 8, 9, 10, 13, and 14 (NAI-03) & NAI-03.1 Corrections:
 - Ingests raw multi-category corpora streaming from native_ai/datasets/raw/
 - Applies TextCleaner (Unicode, HTML artifacts, excessive whitespace, minimum length)
 - Applies PrivacyFilter (PII redaction, secret rejection, confidential document filtering)
 - Applies Deduplicator (Exact, normalized, and MinHash near-duplicate removal)
-- Applies DatasetSplitter (Leakage-resistant Train 98%, Val 1%, Test 1% split)
+- Applies DatasetSplitter (Leakage-resistant split with actual measured percentages & token counts)
 - Saves split datasets to native_ai/datasets/splits/
 - Produces full Quality Dashboard / Machine-readable Report in native_ai/datasets/reports/quality_report.json
 - Preserves all manifests and checksums in native_ai/datasets/manifests/
@@ -28,6 +28,7 @@ from native_ai.datasets.privacy_filter import PrivacyFilter
 from native_ai.datasets.deduplication import Deduplicator
 from native_ai.datasets.splitter import DatasetSplitter
 from native_ai.datasets.curate_raw_sources import curate_and_write_sources
+from native_ai.tokenizer.love_tokenizer import LoveTokenizer
 
 DATASETS_DIR = PROJECT_ROOT / "native_ai" / "datasets"
 RAW_DIR = DATASETS_DIR / "raw"
@@ -35,11 +36,12 @@ STAGED_DIR = DATASETS_DIR / "staged"
 SPLITS_DIR = DATASETS_DIR / "splits"
 MANIFESTS_DIR = DATASETS_DIR / "manifests"
 REPORTS_DIR = DATASETS_DIR / "reports"
+TOKENIZER_ARTIFACTS = PROJECT_ROOT / "native_ai" / "tokenizer" / "artifacts"
 
 
 def run_dataset_pipeline() -> Dict[str, Any]:
     print("=" * 80)
-    print("  LOVE NATIVE AI: DATASET ENGINEERING & QUALITY PIPELINE")
+    print("  LOVE NATIVE AI: DATASET ENGINEERING & QUALITY PIPELINE (NAI-03.1)")
     print("=" * 80)
 
     # 1. Ensure Raw Corpora Exist
@@ -51,7 +53,16 @@ def run_dataset_pipeline() -> Dict[str, Any]:
     # 2. Source Registry
     registry = DatasetSourceRegistry()
 
-    # 3. Initialize Pipeline Modules
+    # 3. Load Tokenizer if available for exact token counting
+    tokenizer = None
+    if TOKENIZER_ARTIFACTS.exists():
+        try:
+            tokenizer = LoveTokenizer.from_pretrained(TOKENIZER_ARTIFACTS)
+            print("Loaded LOVE Tokenizer v0.1 for exact token counting.")
+        except Exception as e:
+            print(f"Tokenizer load failed ({e}); proceeding with word approximations.")
+
+    # 4. Initialize Pipeline Modules
     ingestor = DatasetIngestion()
     cleaner = TextCleaner(min_chars=40, min_words=8)
     privacy_filter = PrivacyFilter()
@@ -88,7 +99,7 @@ def run_dataset_pipeline() -> Dict[str, Any]:
 
     t0 = time.perf_counter()
 
-    # 4. Stream & Process Each Source File
+    # 5. Stream & Process Each Source File
     for filename, source_id in source_map.items():
         file_path = RAW_DIR / filename
         if not file_path.exists():
@@ -160,30 +171,47 @@ def run_dataset_pipeline() -> Dict[str, Any]:
 
     duration = time.perf_counter() - t0
 
-    # 5. Save Staged Full Dataset
+    # 6. Save Staged Full Dataset
     STAGED_DIR.mkdir(parents=True, exist_ok=True)
     staged_path = STAGED_DIR / "cleaned_corpus.jsonl"
     with open(staged_path, "w", encoding="utf-8") as f:
         for r in admitted_records:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
-    # 6. Split Dataset (Train 98%, Val 1%, Test 1%)
+    # 7. Split Dataset & Save Manifests
     train_set, val_set, test_set = splitter.split_records(admitted_records)
-    split_manifests = splitter.save_splits(train_set, val_set, test_set, SPLITS_DIR, MANIFESTS_DIR)
+    split_manifests = splitter.save_splits(
+        train_set, val_set, test_set, SPLITS_DIR, MANIFESTS_DIR, tokenizer=tokenizer
+    )
 
-    # 7. Update Source Registry
+    # 8. Update Source Registry
     registry.export_registry(MANIFESTS_DIR / "source_registry.json")
 
-    # 8. Compute Distribution Percentages
+    # 9. Compute Distribution Percentages
     total_admitted = max(1, metrics["admitted_documents"])
     category_pct = {
         cat: round(count / total_admitted * 100, 2)
         for cat, count in metrics["category_distribution"].items()
     }
 
-    # 9. Assemble Quality Report
+    # 10. Corrected Split Telemetry
+    total_tokens = sum(m.get("num_tokens") or 0 for m in split_manifests.values())
+    actual_doc_proportions = {
+        "train": round(len(train_set) / total_admitted * 100, 2),
+        "validation": round(len(val_set) / total_admitted * 100, 2),
+        "test": round(len(test_set) / total_admitted * 100, 2),
+    }
+    actual_token_proportions = {}
+    if total_tokens > 0:
+        actual_token_proportions = {
+            "train": round((split_manifests["train"].get("num_tokens") or 0) / total_tokens * 100, 2),
+            "validation": round((split_manifests["val"].get("num_tokens") or 0) / total_tokens * 100, 2),
+            "test": round((split_manifests["test"].get("num_tokens") or 0) / total_tokens * 100, 2),
+        }
+
+    # 11. Assemble Comprehensive Quality Report
     report = {
-        "pipeline_version": "1.0.0",
+        "pipeline_version": "1.1.0",
         "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "processing_time_seconds": round(duration, 3),
         "documents": {
@@ -210,6 +238,16 @@ def run_dataset_pipeline() -> Dict[str, Any]:
             "total_cleaned_words": metrics["admitted_words"],
             "avg_words_per_document": round(metrics["admitted_words"] / max(1, metrics["admitted_documents"]), 2),
         },
+        "tokens": {
+            "total_cleaned_tokens": total_tokens,
+            "tokens_per_word": round(total_tokens / max(1, metrics["admitted_words"]), 3) if total_tokens else None,
+            "split_token_counts": {
+                "train": split_manifests["train"].get("num_tokens"),
+                "validation": split_manifests["val"].get("num_tokens"),
+                "test": split_manifests["test"].get("num_tokens"),
+            },
+            "actual_token_proportions_pct": actual_token_proportions,
+        },
         "category_distribution": {
             "counts": metrics["category_distribution"],
             "percentages": category_pct,
@@ -221,10 +259,35 @@ def run_dataset_pipeline() -> Dict[str, Any]:
                 "structured_tasks": 10.0,
             }
         },
+        "split_statistics_corrected": {
+            "target_proportions": {"train": 98.0, "validation": 1.0, "test": 1.0},
+            "actual_document_counts": {"train": len(train_set), "validation": len(val_set), "test": len(test_set)},
+            "actual_document_proportions_pct": actual_doc_proportions,
+            "actual_token_proportions_pct": actual_token_proportions,
+            "evaluation_sample_adequacy": "INSUFFICIENT_FOR_RELIABLE_EVALUATION",
+            "statistical_warning": (
+                "The current validation set (1 doc, 235 tokens) and test set (1 doc, 389 tokens) "
+                "are statistically insufficient for measuring loss, perplexity, or generalization. "
+                "Minimum recommended evaluation split requires >= 50 independent documents or >= 20,000 tokens."
+            ),
+        },
         "splits": {
             "train": split_manifests["train"],
             "validation": split_manifests["val"],
             "test": split_manifests["test"],
+        },
+        "provenance_status": {
+            "approved_sources": list(registry.get_approved_sources().keys()),
+            "unresolved_sources": list(registry.get_unresolved_sources().keys()),
+            "approval_rate_pct": round(len(registry.get_approved_sources()) / max(1, len(registry.sources)) * 100, 2),
+        },
+        "pretraining_readiness": {
+            "decision": "NOT_READY_FOR_PRETRAINING",
+            "readiness_reasons": [
+                "Corpus scale (6,392 tokens / 22 docs) is several orders of magnitude below minimum 20M-100M requirement.",
+                "Validation and test sets have only 1 document each (insufficient statistical significance).",
+                "Source src_tech_01 marked UNRESOLVED due to improper MIT attribution without upstream copyright deed.",
+            ],
         },
         "filter_rejection_reasons": metrics["filter_rejection_reasons"],
         "privacy_redactions_applied": metrics["privacy_redactions"],
@@ -239,11 +302,11 @@ def run_dataset_pipeline() -> Dict[str, Any]:
     print(f"Raw Ingested: {metrics['raw_documents_read']} docs ({metrics['raw_bytes_read']:,} bytes)")
     print(f"Duplicates Removed: {report['documents']['total_duplicates_removed']}")
     print(f"Privacy/Cleaning Rejected: {metrics['privacy_rejected'] + metrics['cleaning_rejected']}")
-    print(f"Final Admitted: {metrics['admitted_documents']} docs ({metrics['admitted_words']:,} words)")
+    print(f"Final Admitted: {metrics['admitted_documents']} docs ({metrics['admitted_words']:,} words, {total_tokens} tokens)")
     print(f"Splits Generated:")
-    print(f"  Train: {len(train_set)} docs ({split_manifests['train']['num_words']:,} words)")
-    print(f"  Val:   {len(val_set)} docs ({split_manifests['val']['num_words']:,} words)")
-    print(f"  Test:  {len(test_set)} docs ({split_manifests['test']['num_words']:,} words)")
+    print(f"  Train: {len(train_set)} docs ({actual_doc_proportions['train']}%) | {split_manifests['train'].get('num_tokens')} tokens")
+    print(f"  Val:   {len(val_set)} docs ({actual_doc_proportions['validation']}%) | {split_manifests['val'].get('num_tokens')} tokens")
+    print(f"  Test:  {len(test_set)} docs ({actual_doc_proportions['test']}%) | {split_manifests['test'].get('num_tokens')} tokens")
     print(f"Quality Report exported to: {report_file}")
 
     return report

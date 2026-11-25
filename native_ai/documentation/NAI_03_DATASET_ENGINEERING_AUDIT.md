@@ -11,7 +11,7 @@
 
 Phase **NAI-03** implements the independent dataset engineering, curation, cleaning, deduplication, privacy filtering, and splitting pipeline for LOVE's native language model. The entire subsystem was built strictly within `F:\LOVE\native_ai` using the dedicated local Python 3.11 virtual environment (`.venv`). Zero modifications were made to the canonical LOVE SQLite database, existing assistant services, authentication modules, KURO, or FRIDAY-v1. Zero Git commands were run, zero cloud training or third-party inference APIs were invoked, and no external pretrained weights were downloaded.
 
-The pipeline establishes five distinct, lawful dataset categories (General English & Knowledge, Reasoning & Mathematics, Instructions & Conversations, Coding & Technical Material, and Structured Tasks) with documented CC0/MIT provenance. It incorporates a streaming ingestion engine, NFKC Unicode and HTML cleaning, regex-based privacy and credential filtering, composite deduplication (exact SHA-256, normalized hash, and MinHash near-duplicate clustering), and leakage-resistant deterministic splitting (98% Train, 1% Val, 1% Test). An evaluation of LOVE Tokenizer v0.1 on the newly engineered multi-domain corpus demonstrated **100% lossless UTF-8 roundtrip fidelity** and confirmed that **100.0% of documents fit cleanly within the 512-token context limit**. The automated test suite completed with **34/34 tests passing** (100% pass rate).
+The pipeline establishes five distinct, lawful dataset categories (General English & Knowledge, Reasoning & Mathematics, Instructions & Conversations, Coding & Technical Material, and Structured Tasks) with documented CC0/MIT provenance. It incorporates a streaming ingestion engine, NFKC Unicode and HTML cleaning, regex-based privacy and credential filtering, composite deduplication (exact SHA-256, normalized hash, and MinHash near-duplicate clustering), and leakage-resistant deterministic splitting (20 Train [90.91%], 1 Val [4.55%], 1 Test [4.55%]; target ratio 98/1/1). An evaluation of LOVE Tokenizer v0.1 on the newly engineered multi-domain corpus demonstrated **100% lossless UTF-8 roundtrip fidelity** and confirmed that **100.0% of documents fit cleanly within the 512-token context limit**. The automated test suite completed with **34/34 tests passing** (100% pass rate; expanded to 43/43 in NAI-03.1).
 
 ---
 
@@ -35,9 +35,9 @@ flowchart TD
     subgraph SplittingStorage ["3. Splitting & Manifest Generation"]
         Dedup --> Staged["Staged Cleaned Corpus (cleaned_corpus.jsonl)"]
         Staged --> Splitter["DatasetSplitter (Deterministic Seed 42)"]
-        Splitter --> TrainSplit["Train Split (98%) -> train.jsonl"]
-        Splitter --> ValSplit["Val Split (1%) -> val.jsonl"]
-        Splitter --> TestSplit["Test Split (1%) -> test.jsonl"]
+        Splitter --> TrainSplit["Train Split (20 docs / 90.91%) -> train.jsonl"]
+        Splitter --> ValSplit["Val Split (1 doc / 4.55%) -> val.jsonl"]
+        Splitter --> TestSplit["Test Split (1 doc / 4.55%) -> test.jsonl"]
         Splitter --> Manifests["Independent Split Manifests & Checksums"]
     end
 
@@ -124,15 +124,18 @@ The composite deduplicator ([deduplication.py](file:///f:/LOVE/native_ai/dataset
 
 ---
 
-### 7. Dataset Splitting & Contamination Guarantee (Task 10)
+### 7. Dataset Splitting & Contamination Guarantee (Task 10 — Corrected under NAI-03.1)
 
 Executed deterministically (seed = 42) via [splitter.py](file:///f:/LOVE/native_ai/datasets/splitter.py):
 
-| Split | Proportions | Document Count | Word Count | File Size | SHA-256 Checksum |
-|---|:---:|:---:|:---:|:---:|---|
-| **Train** | ~98% | **20 docs** | 1,951 words | 17,545 bytes | `61c1cdbffcdb562c498f4890ba36915692240f05a676e54e0f97ba81fd34a620` |
-| **Validation** | ~1% | **1 doc** | 96 words | 908 bytes | `b9d4787b48d0286b5df3a94141c478158a6aa96f1c69b8e879d3d38c36782103` |
-| **Test** | ~1% | **1 doc** | 90 words | 984 bytes | `fc622dd9543bf98ca9e4d85638d93dd039ecc5994a5a1dcd0034980c57cc26e2` |
+| Split | Target Ratio | Actual Doc % | Document Count | Actual Token % | Token Count | Word Count | File Size | SHA-256 Checksum |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---|
+| **Train** | 98.0% | **90.91%** | **20 docs** | **90.24%** | **5,768 tokens** | 1,951 words | 17,545 bytes | `61c1cdbffcdb562c498f4890ba36915692240f05a676e54e0f97ba81fd34a620` |
+| **Validation** | 1.0% | **4.55%** | **1 doc** | **3.68%** | **235 tokens** | 96 words | 908 bytes | `b9d4787b48d0286b5df3a94141c478158a6aa96f1c69b8e879d3d38c36782103` |
+| **Test** | 1.0% | **4.55%** | **1 doc** | **6.09%** | **389 tokens** | 90 words | 984 bytes | `fc622dd9543bf98ca9e4d85638d93dd039ecc5994a5a1dcd0034980c57cc26e2` |
+
+> [!WARNING] Statistical Evaluation Limitation & Correction Note
+> While the target ratio was set to 98% / 1% / 1%, integer rounding on a small 22-document corpus mathematically allocates 20 documents (90.91%) to training, 1 document (4.55%) to validation, and 1 document (4.55%) to test. Labeling this split as "98% / 1% / 1%" was mathematically inaccurate and has been formally corrected. Furthermore, an evaluation split of only 1 validation document (235 tokens) and 1 test document (389 tokens) lacks statistical significance and cannot reliably gauge loss, perplexity, or generalization. Minimum recommended evaluation split is $\ge 50$ independent documents or $\ge 20,000$ tokens.
 
 **Zero Cross-Split Contamination Verification:**
 - $\text{Train} \cap \text{Val} = \emptyset$ (Disjoint)
@@ -179,44 +182,53 @@ Evaluated via [audit_tokenizer_on_dataset.py](file:///f:/LOVE/native_ai/scripts/
 
 ### 10. Automated Test Results (Task 15)
 
-Executed via `pytest -v F:\LOVE\native_ai\tests` (34 total tests):
+Executed via `pytest -v F:\LOVE\native_ai\tests` (34 original tests passed; expanded to 43/43 tests passing in NAI-03.1):
 
 ```
 native_ai/tests/test_architecture.py::test_configuration_validation PASSED [  2%]
-native_ai/tests/test_architecture.py::test_embedding_output_shape_and_bounds PASSED [  5%]
-native_ai/tests/test_architecture.py::test_rmsnorm_stability PASSED      [  8%]
-native_ai/tests/test_architecture.py::test_rope_dimensions_and_rotation PASSED [ 11%]
-native_ai/tests/test_architecture.py::test_swiglu_dimensions PASSED      [ 14%]
-native_ai/tests/test_architecture.py::test_causal_self_attention_shape_and_sdpa PASSED [ 17%]
-native_ai/tests/test_architecture.py::test_causal_masking_future_token_leakage_prevention PASSED [ 20%]
-native_ai/tests/test_architecture.py::test_transformer_block_residual_connections PASSED [ 23%]
-native_ai/tests/test_architecture.py::test_tied_input_output_embeddings PASSED [ 26%]
-native_ai/tests/test_architecture.py::test_loss_calculation_and_gradient_finiteness PASSED [ 29%]
-native_ai/tests/test_architecture.py::test_adamw_optimizer_step PASSED   [ 32%]
-native_ai/tests/test_architecture.py::test_cpu_execution PASSED          [ 35%]
-native_ai/tests/test_architecture.py::test_cuda_execution PASSED         [ 38%]
-native_ai/tests/test_dataset_pipeline.py::test_source_registry_and_license_validation PASSED [ 41%]
-native_ai/tests/test_dataset_pipeline.py::test_text_cleaning_rules PASSED [ 44%]
-native_ai/tests/test_dataset_pipeline.py::test_privacy_filter_redaction_and_rejection PASSED [ 47%]
-native_ai/tests/test_dataset_pipeline.py::test_deduplication_exact_normalized_and_near PASSED [ 50%]
-native_ai/tests/test_dataset_pipeline.py::test_deterministic_splitting_and_zero_cross_split_leakage PASSED [ 52%]
-native_ai/tests/test_dataset_pipeline.py::test_streaming_ingestion_generator PASSED [ 55%]
-native_ai/tests/test_dataset_pipeline.py::test_tokenizer_compatibility_on_splits PASSED [ 58%]
-native_ai/tests/test_tokenizer.py::test_vocab_size_and_special_tokens PASSED [ 61%]
-native_ai/tests/test_tokenizer.py::test_encode_decode_round_trip PASSED  [ 64%]
-native_ai/tests/test_tokenizer.py::test_empty_and_whitespace_text PASSED [ 67%]
-native_ai/tests/test_tokenizer.py::test_case_preservation PASSED         [ 70%]
-native_ai/tests/test_tokenizer.py::test_punctuation_and_symbols PASSED   [ 73%]
-native_ai/tests/test_tokenizer.py::test_numbers_and_formatting PASSED    [ 76%]
-native_ai/tests/test_tokenizer.py::test_urls_and_identifiers PASSED      [ 79%]
-native_ai/tests/test_tokenizer.py::test_unicode_and_uncommon_characters PASSED [ 82%]
-native_ai/tests/test_tokenizer.py::test_repeated_text_and_long_input PASSED [ 85%]
-native_ai/tests/test_tokenizer.py::test_special_token_boundaries_and_chat_template PASSED [ 88%]
-native_ai/tests/test_tokenizer.py::test_save_and_reload_equivalence PASSED [ 91%]
-native_ai/tests/test_tokenizer.py::test_deterministic_encoding PASSED    [ 94%]
+native_ai/tests/test_architecture.py::test_embedding_output_shape_and_bounds PASSED [  4%]
+native_ai/tests/test_architecture.py::test_rmsnorm_stability PASSED      [  6%]
+native_ai/tests/test_architecture.py::test_rope_dimensions_and_rotation PASSED [  9%]
+native_ai/tests/test_architecture.py::test_swiglu_dimensions PASSED      [ 11%]
+native_ai/tests/test_architecture.py::test_causal_self_attention_shape_and_sdpa PASSED [ 13%]
+native_ai/tests/test_architecture.py::test_causal_masking_future_token_leakage_prevention PASSED [ 16%]
+native_ai/tests/test_architecture.py::test_transformer_block_residual_connections PASSED [ 18%]
+native_ai/tests/test_architecture.py::test_tied_input_output_embeddings PASSED [ 20%]
+native_ai/tests/test_architecture.py::test_loss_calculation_and_gradient_finiteness PASSED [ 23%]
+native_ai/tests/test_architecture.py::test_adamw_optimizer_step PASSED   [ 25%]
+native_ai/tests/test_architecture.py::test_cpu_execution PASSED          [ 27%]
+native_ai/tests/test_architecture.py::test_cuda_execution PASSED         [ 30%]
+native_ai/tests/test_dataset_pipeline.py::test_source_registry_and_license_validation PASSED [ 32%]
+native_ai/tests/test_dataset_pipeline.py::test_text_cleaning_rules PASSED [ 34%]
+native_ai/tests/test_dataset_pipeline.py::test_privacy_filter_redaction_and_rejection PASSED [ 37%]
+native_ai/tests/test_dataset_pipeline.py::test_deduplication_exact_normalized_and_near PASSED [ 39%]
+native_ai/tests/test_dataset_pipeline.py::test_deterministic_splitting_and_zero_cross_split_leakage PASSED [ 41%]
+native_ai/tests/test_dataset_pipeline.py::test_streaming_ingestion_generator PASSED [ 44%]
+native_ai/tests/test_dataset_pipeline.py::test_tokenizer_compatibility_on_splits PASSED [ 46%]
+native_ai/tests/test_dataset_pipeline.py::test_source_provenance_validation PASSED [ 48%]
+native_ai/tests/test_dataset_pipeline.py::test_license_evidence_completeness PASSED [ 51%]
+native_ai/tests/test_dataset_pipeline.py::test_missing_source_attribution PASSED [ 53%]
+native_ai/tests/test_dataset_pipeline.py::test_incorrect_document_split_percentages PASSED [ 55%]
+native_ai/tests/test_dataset_pipeline.py::test_token_count_reporting PASSED [ 58%]
+native_ai/tests/test_dataset_pipeline.py::test_group_level_leakage PASSED [ 60%]
+native_ai/tests/test_dataset_pipeline.py::test_reproducible_source_manifests PASSED [ 62%]
+native_ai/tests/test_dataset_pipeline.py::test_insufficient_validation_test_sample_warnings PASSED [ 65%]
+native_ai/tests/test_dataset_pipeline.py::test_storage_capacity_estimation PASSED [ 67%]
+native_ai/tests/test_tokenizer.py::test_vocab_size_and_special_tokens PASSED [ 69%]
+native_ai/tests/test_tokenizer.py::test_encode_decode_round_trip PASSED  [ 72%]
+native_ai/tests/test_tokenizer.py::test_empty_and_whitespace_text PASSED [ 74%]
+native_ai/tests/test_tokenizer.py::test_case_preservation PASSED         [ 76%]
+native_ai/tests/test_tokenizer.py::test_punctuation_and_symbols PASSED   [ 79%]
+native_ai/tests/test_tokenizer.py::test_numbers_and_formatting PASSED    [ 81%]
+native_ai/tests/test_tokenizer.py::test_urls_and_identifiers PASSED      [ 83%]
+native_ai/tests/test_tokenizer.py::test_unicode_and_uncommon_characters PASSED [ 86%]
+native_ai/tests/test_tokenizer.py::test_repeated_text_and_long_input PASSED [ 88%]
+native_ai/tests/test_tokenizer.py::test_special_token_boundaries_and_chat_template PASSED [ 90%]
+native_ai/tests/test_tokenizer.py::test_save_and_reload_equivalence PASSED [ 93%]
+native_ai/tests/test_tokenizer.py::test_deterministic_encoding PASSED    [ 95%]
 native_ai/tests/test_tokenizer.py::test_batch_encode_padding_and_truncation PASSED [ 97%]
 native_ai/tests/test_tokenizer.py::test_transformer_integration_compatibility PASSED [100%]
-======================= 34 passed, 2 warnings in 14.98s =======================
+======================= 43 passed, 2 warnings in 14.78s =======================
 ```
 
 ---
